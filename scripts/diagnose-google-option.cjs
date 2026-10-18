@@ -30,6 +30,7 @@ function hints(version, webview) {
     { name: 'wv-kept-without-Version-token-DIAGNOSTIC-ONLY', ua: nativeUA.replace('Version/4.0 ', ''), hints: hints('113.0.5672.136', true) },
     { name: 'mobile-chrome113-control', ua: mobile('113.0.5672.136'), hints: hints('113.0.5672.136', false) },
     { name: 'mobile-modern-chrome-control', ua: mobile(modern), hints: hints(modern, false) },
+    { name: 'real-desktop-chrome-without-PublicKeyCredential', disableWebAuthn: true },
     { name: 'real-desktop-chrome-repeat' },
     { name: 'webview113-native-repeat', ua: nativeUA, hints: hints('113.0.5672.136', true) },
   ];
@@ -45,7 +46,16 @@ function hints(version, webview) {
         return route.abort('blockedbyclient');
       return route.continue();
     });
+    if (profile.disableWebAuthn) {
+      // Remove a capability in this read-only control. Never add/fake it in the app.
+      await context.addInitScript(() => Object.defineProperty(window, 'PublicKeyCredential', { value: undefined, configurable: true }));
+    }
     const page = await context.newPage();
+    const fragmentRequests = [];
+    page.on('response', r => {
+      const u = new URL(r.url());
+      if (u.pathname.includes('login_fragment')) fragmentRequests.push({ url: safe(r.url()), status: r.status() });
+    });
     if (profile.hints) {
       const cdp = await context.newCDPSession(page);
       await cdp.send('Network.setUserAgentOverride', { userAgent: profile.ua,
@@ -62,7 +72,7 @@ function hints(version, webview) {
         try {
           const text = await response.text();
           const snippets = [];
-          const pattern = /social.?login|sign.?in.?with.?google|web.?view|in.?app.?browser|disallowed_useragent|google.{0,35}(?:sign|auth)|(?:sign|auth).{0,35}google/gi;
+          const pattern = /social.?login|sign.?in.?with.?google|web.?view|webauthn-status|login_fragment|PublicKeyCredential|isConditionalMediationAvailable|isUserVerifyingPlatformAuthenticatorAvailable|in.?app.?browser|disallowed_useragent|google.{0,35}(?:sign|auth)|(?:sign|auth).{0,35}google/gi;
           for (const match of text.matchAll(pattern)) {
             snippets.push(text.slice(Math.max(0, match.index - 180), match.index + match[0].length + 230));
             if (snippets.length >= 8) break;
@@ -93,6 +103,10 @@ function hints(version, webview) {
         return { title: document.title, controls, formActions: [...document.forms].map(f => {
             const u = new URL(f.action); return u.origin + u.pathname;
           }), ua: navigator.userAgent, hints: navigator.userAgentData?.toJSON(),
+          fragments: [...document.querySelectorAll('webauthn-status, include-fragment')].map(e => ({ tag:e.tagName,
+            src:e.getAttribute('src')?.split('?')[0], dataSrc:e.getAttribute('data-src')?.split('?')[0],
+            credentialsAttribute:e.getAttribute('data-target'), text:e.innerText.slice(0,120) })),
+          webauthnElementDefined: !!customElements.get('webauthn-status'),
           secureContext: isSecureContext, credentialsApi: !!navigator.credentials,
           publicKeyCredential: !!window.PublicKeyCredential, federatedCredential: !!window.FederatedCredential,
           flags, scripts: [...document.scripts].filter(s => s.src).map(s => {
@@ -103,11 +117,13 @@ function hints(version, webview) {
       await page.screenshot({ path: path.join(out, profile.name + '.png') });
     } catch (e) { record.error = e.name; }
     await Promise.allSettled(pending);
+    record.fragmentRequests = fragmentRequests;
     results.push(record);
     fs.writeFileSync(path.join(out, profile.name + '.json'), JSON.stringify(record, null, 2));
     const summary = { profile: record.profile, status: record.status, engine: modern,
       serverGooglePhrase: record.serverGooglePhrase, serverSocialForm: record.serverSocialForm,
       googleCount: record.googleCount, controls: record.dom?.controls, formActions: record.dom?.formActions,
+      publicKeyCredential: record.dom?.publicKeyCredential, fragments: record.dom?.fragments, fragmentRequests,
       hints: record.dom?.hints, identificationHeaders: record.identificationHeaders, error: record.error };
     console.log('::notice title=Sign-in diagnosis ' + profile.name + '::' + escape(JSON.stringify(summary)));
     await context.close();
