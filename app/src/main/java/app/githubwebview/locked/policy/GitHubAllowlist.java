@@ -222,6 +222,8 @@ public final class GitHubAllowlist {
         entries.add(AllowEntry.signIn("accounts.google.com", Collections.<String>emptyList(),
                 "Google's account/sign-in pages - GitHub's \"Sign in with Google\" hand-off. Displayed "
                         + "in the main view or the existing guarded sign-in window. No browser escape."));
+        entries.add(AllowEntry.resourceOnly("accounts.youtube.com", paths("/accounts/CheckConnection"),
+                "Google identity connection-check iframe observed on the served sign-in page; not YouTube navigation."));
         // Google's static asset hosts serve their identity UI from content-hashed, opaque paths
         // (www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.en.<hash>/...) and
         // the path changes with every deployment, so enumerating prefixes here is guaranteed to break

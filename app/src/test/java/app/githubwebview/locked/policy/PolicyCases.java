@@ -360,6 +360,17 @@ public final class PolicyCases {
         sub(cases, "account avatar", "https://lh3.googleusercontent.com/a/ACg8ocABC=s96-c", true, null);
         sub(cases, "Google font file", "https://fonts.gstatic.com/s/roboto/v30/x.woff2", true, null);
 
+        sub(cases, "Google identity connection check resource",
+                "https://accounts.youtube.com/accounts/CheckConnection?checkConnection=1", true, null);
+        frame(cases, "Google identity connection check frame",
+                "https://accounts.youtube.com/accounts/CheckConnection?checkConnection=1", true, null);
+        doc(cases, "connection check never grants a YouTube navigation",
+                "https://accounts.youtube.com/accounts/CheckConnection", false, BlockReason.DOCUMENT_NOT_ALLOWED);
+        sub(cases, "YouTube account host outside the reviewed check path",
+                "https://accounts.youtube.com/watch?v=x", false, BlockReason.PATH_NOT_ALLOWED);
+        both(cases, "the YouTube website is still not allowed", "https://www.youtube.com/watch?v=x",
+                false, BlockReason.HOST_NOT_ALLOWED);
+
         // --- what stays out ----------------------------------------------------------------------
         doc(cases, "look-alike of Google's account host",
                 "https://accounts.google.com.evil.example/signin", false, BlockReason.HOST_NOT_ALLOWED);

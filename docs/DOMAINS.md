@@ -22,7 +22,10 @@ embedded document. Redirects and pop-ups do not convert an ASSET into a navigati
   challenge allowances; this observation is network-specific, not a claim that all GitHub users
   see DataDome. The Android signup probe additionally requested `/i.js` and `/interstitial.1.33.1.202610161.js` on `ct.captcha-delivery.com`. Pinning only bootstrap files caused an actual blocked-script failure; this dedicated challenge-asset host is therefore a reviewed path-unrestricted ASSET exception, like gstatic. The signed-out Chrome trace also requested `static.captcha-delivery.com`; it is resource-only. No challenge was solved or bypassed.
 * GitHub supports Google social sign-in. [1](https://github.blog/changelog/2025-07-15-social-login-with-google-is-now-generally-available/)
-  The original Google identity entries and reCAPTCHA support are retained. The exact opaque
+  The original Google identity entries and reCAPTCHA support are retained. The real Android Google
+  probe also requested `accounts.youtube.com/accounts/CheckConnection`; that exact connection-check
+  prefix is approved only as a resource/embedded frame. It grants no YouTube browsing or video access.
+  `play.google.com/log` remains refused, and no complete authentication claim follows from these allowances. The exact opaque
   gstatic identity-bundle paths must not be repinned to `/accounts/`: that caused the original
   superimposed-email/dead-form bug. Arkose replaces the Arena-only Cloudflare Turnstile exception.
 * `alive.github.com` is the production real-time channel; it is **not proof that every Actions
@@ -90,6 +93,7 @@ interchangeable evidence. See [../TEST_REPORT.md](../TEST_REPORT.md) for actual 
 | `images.ctfassets.net` | ASSET | `/8aevphvgewt8/` |
 | `videos.ctfassets.net` | ASSET | `/8aevphvgewt8/` |
 | `accounts.google.com` | SIGN_IN | Any path |
+| `accounts.youtube.com` | ASSET | `/accounts/CheckConnection` |
 | `ssl.gstatic.com` | ASSET | Any path |
 | `www.gstatic.com` | ASSET | Any path |
 | `apis.google.com` | ASSET | `/js/`, `/gsi/`, `/_/` |
@@ -104,9 +108,9 @@ interchangeable evidence. See [../TEST_REPORT.md](../TEST_REPORT.md) for actual 
 | `geo.captcha-delivery.com` | ASSET | `/captcha/`, `/interstitial/` |
 | `ct.captcha-delivery.com` | ASSET | Any path |
 
-**65 exact hosts:** 2 PRODUCT,
+**66 exact hosts:** 2 PRODUCT,
 1 SIGN_IN,
-62 ASSET.
+63 ASSET.
 `AllowlistRegressionTest` pins the literal list, roles and reviewed path exceptions.
 
 ASSET is a URL role, not an enforced MIME type. Paths are **prefixes**, using the original engine's

@@ -108,7 +108,7 @@ public class AllowlistRegressionTest {
     public void theThirdPartyHostsAreExactlyTheReviewedSet() {
         List<String> expected = new ArrayList<String>(EXPECTED_SERVICE_HOSTS);
         expected.addAll(Arrays.asList(
-                "accounts.google.com", "ssl.gstatic.com", "www.gstatic.com", "apis.google.com",
+                "accounts.google.com", "accounts.youtube.com", "ssl.gstatic.com", "www.gstatic.com", "apis.google.com",
                 "fonts.gstatic.com", "lh3.googleusercontent.com", "www.google.com", "www.recaptcha.net",
                 "octocaptcha.com", "github-api.arkoselabs.com", "client-api.arkoselabs.com",
                 "static.captcha-delivery.com", "geo.captcha-delivery.com", "ct.captcha-delivery.com"));
@@ -332,6 +332,11 @@ public class AllowlistRegressionTest {
     @Test
     public void pathPinsAndInputFixExceptionsAreExplicit() {
         PolicyConfig config = GitHubAllowlist.productionConfig();
+        assertEquals(Arrays.asList("/accounts/CheckConnection"),
+                config.findByHost("accounts.youtube.com").pathPrefixes());
+        assertFalse(config.evaluateNavigation("https://accounts.youtube.com/accounts/CheckConnection").isAllowed());
+        assertFalse(config.evaluateRequest("https://accounts.youtube.com/watch?v=x").isAllowed());
+        assertFalse(config.evaluateRequest("https://www.youtube.com/watch?v=x").isAllowed());
         assertEquals(Arrays.asList("/recaptcha/"), config.findByHost("www.google.com").pathPrefixes());
         assertEquals(Arrays.asList("/fc/", "/v2/"), config.findByHost("github-api.arkoselabs.com").pathPrefixes());
         assertEquals(Arrays.asList("/fc/", "/v2/"), config.findByHost("client-api.arkoselabs.com").pathPrefixes());
