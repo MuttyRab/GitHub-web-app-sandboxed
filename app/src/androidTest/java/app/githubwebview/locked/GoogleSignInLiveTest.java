@@ -84,6 +84,17 @@ public class GoogleSignInLiveTest {
             assertNotNull("the page must be inspectable (JavaScript runs on it)", probe);
             assertTrue("the probe must return something", probe.length() > 0);
 
+            // Independent rendering diagnostic, NOT a fallback for GitHub's unsupported Google
+            // handoff. The provider served this generic identifier form with the genuine WV UA.
+            // Type a reserved address via the native IME and inspect the original floating label;
+            // do NOT click Next, submit credentials, authenticate, or work around a rejection.
+            assumeTrue("Google did not serve its generic identifier form; input not tested",
+                    probe.contains("SIGNIN_FORM_PRESENT"));
+            EmailInputRegressionTest.exerciseNativeInput(scenario,
+                    "input[type=email],input[name=identifier],input#identifierId", "google-generic");
+            Log.i(TAG, "input probe generic Google: PASS native identifier entry/editing, keyboard resize "
+                    + "and prompt geometry; rendering diagnostic only, NO submission or GitHub OAuth claim");
+
             // The regression that made sign-in forms dead in the field: the page's own scripts were
             // refused by the allow-list, so the page rendered its static markup and never became
             // interactive. A page the app allows to load must not have its own assets refused - if the

@@ -298,6 +298,7 @@ jobs:
                   ('Page loads on the device', r'load \(|main frame load error|recovery \(|watchdog found|refused document|restored', 30),
                   ('Live probes on the device', r'live smoke|probe|evaluateJavascript', 20),
                   ('Email input probes', r'input probe', 24),
+                  ('Generic Google input diagnostic (not OAuth)', r'input probe (?:google-generic|generic Google)', 8),
                   ('GitHub workflow probes', r'github workflow probe', 20),
                   ('Actions page and completed-job probes', r'github workflow probe (?:actions|completed-job)', 6),
                   ('JavaScript errors on device', r'console:.*(?:TypeError|SyntaxError|ReferenceError|Unhandled)', 20),

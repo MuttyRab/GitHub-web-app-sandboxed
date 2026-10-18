@@ -141,7 +141,7 @@ public class EmailInputRegressionTest {
         }
     }
 
-    private static void exerciseNativeInput(ActivityScenario<MainActivity> scenario, String selector,
+    static void exerciseNativeInput(ActivityScenario<MainActivity> scenario, String selector,
                                              String name) throws Exception {
         scenario.onActivity(a -> {
             WebView w = LivePageSupport.activeView(a);
@@ -164,16 +164,16 @@ public class EmailInputRegressionTest {
         LivePageSupport.type(scenario, ADDRESS);
         assertTrue("native typed email must reach the form", LivePageSupport.waitFor(scenario,
                 "document.querySelector(" + JSONObject.quote(selector) + ").value===" + JSONObject.quote(ADDRESS), 8_000));
-        assertClearPrompt(scenario, selector);
+        assertClearPrompt(scenario, selector, name);
         LivePageSupport.screenshot(name + "-email-typed");
         LivePageSupport.replaceSelection(scenario, 0, 5, "edited");
         assertTrue("native selection/replacement must edit the email", LivePageSupport.waitFor(scenario,
                 "document.querySelector(" + JSONObject.quote(selector) + ").value===" + JSONObject.quote(EDITED), 8_000));
-        assertClearPrompt(scenario, selector);
+        assertClearPrompt(scenario, selector, name);
         LivePageSupport.screenshot(name + "-email-edited");
     }
 
-    private static void assertClearPrompt(ActivityScenario<MainActivity> scenario, String selector) throws Exception {
+    private static void assertClearPrompt(ActivityScenario<MainActivity> scenario, String selector, String name) throws Exception {
         Thread.sleep(450); // allow the real site floating-label transition to settle
         String script = """
                 (function(){
@@ -205,7 +205,7 @@ public class EmailInputRegressionTest {
                 })()
                 """.replace("SELECTOR", JSONObject.quote(selector));
         JSONObject geometry = LivePageSupport.object(scenario, script);
-        Log.i(TAG, "input probe prompt geometry=" + geometry);
+        Log.i(TAG, "input probe " + name + " prompt geometry=" + geometry);
         assertFalse("placeholder must not remain shown over a typed value", geometry.getBoolean("placeholderShown"));
         assertTrue("visible email prompt must not overlap typed text: " + geometry,
                 geometry.getJSONArray("promptOverlaps").length() == 0);
