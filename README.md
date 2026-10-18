@@ -30,7 +30,7 @@ One deliberate security difference: the inherited user-agent `; wv` removal is g
 the genuine WebView identity; refusal of embedded sign-in is not bypassed. There is no browser or
 external-app fallback. Google login, passkeys, security keys and enterprise SSO may be unavailable.
 Passwords, 2FA, account permissions and completed authenticated workflows require real-device testing
-with your own account; no credentials are requested or embedded here.
+with your own account; no personal credentials were requested or embedded in the project/test code.
 
 ## Builds and downloads
 
@@ -39,9 +39,17 @@ are reused. CI builds debug and **signed release** APKs, checks badging and SHA-
 unit/Android-emulator tests. The workflow artifact is **`github-webview-apk`**; install its
 `app-release.apk`. Build output is not committed to Git.
 
-**Verification in progress.** Current build links and observed outcomes will be recorded in
-[TEST_REPORT.md](TEST_REPORT.md) and [docs/EVIDENCE.md](docs/EVIDENCE.md); the historical Arena
-reports are archived under `docs/upstream-arena/` and are not evidence for this APK.
+**[Download the signed APK](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163)** · [Delivery and installation](DELIVERY.md)
+
+[Run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) passed: **4,151 JVM cases**, **60 Android tests passed / 1 skipped / 0 failed**,
+and the exact signed release APK installed and launched. Native GitHub and generic Google identifier
+entry/editing/resize/overlap checks passed. The actual GitHub → Google handoff was skipped because
+GitHub did not offer the button in this WebView; no completed authentication is claimed.
+
+See [TEST_REPORT.md](TEST_REPORT.md) for scope/earlier failures and [docs/EVIDENCE.md](docs/EVIDENCE.md)
+for actual results. The original Arena reports are archived under `docs/upstream-arena/`, not reused
+as evidence for this APK. [Exact changed files](docs/CHANGES.md) · [All domains/roles](docs/DOMAINS.md)
+· [Source preservation](docs/PROVENANCE.md).
 
 The original public demo signing key is retained for reproducible install/upgrade identity. It is
 **not a private production key**. Use the existing `SIGNING_*` environment variables/secrets for a

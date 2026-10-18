@@ -42,3 +42,10 @@ names are the app-specific differences. Original architecture and escape refusal
 
 The original reports are archived verbatim in `upstream-arena/`. Current reports do not reuse their
 pass counts. See `CHANGES.md` for the exact file inventory and `DOMAINS.md` for the complete host roles.
+
+## Delivered build
+
+The delivered signed APK was built and tested from `258e549d889bbec62f1e6735a7e4a1ba939dd089`
+in [run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407).
+The final handover commit changes documentation only; app, build and test sources remain those of that
+verified run. See `../DELIVERY.md` for the artifact and exact byte hash.

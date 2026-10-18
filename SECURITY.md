@@ -26,7 +26,8 @@ Android request interception does not expose every resource redirect hop or WebS
 still enforces exact tunnel host/443, but cannot read TLS paths, MIME, SNI, HTTP methods or socket
 messages. Path restrictions apply only where WebView exposes URLs. No TLS interception, custom
 root CA, response rewriting or certificate bypass is introduced. Browser/DNS/proxy assumptions and
-loopback/HTTP3 constraints from the upstream review remain; this is not an OS firewall for other apps.
+loopback/HTTP3 constraints from the upstream review remain; this is not an OS firewall for other apps. The tests cover the documented URL hooks, HTTPS/CONNECT
+and WebSockets; they are not an independent proof of every browser transport or platform service.
 
 GitHub server CSP is evidence for choosing service hosts, not permission to allow everything it lists.
 No wildcard `*.githubusercontent.com`, `*.actions.githubusercontent.com`, S3, Azure or Google rule is

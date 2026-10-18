@@ -1,105 +1,137 @@
-# GitHub adaptation — test report
+# GitHub adaptation — final test report
 
-## Candidate under verification
+Verified **2026-10-18 UTC** against source **`258e549d889bbec62f1e6735a7e4a1ba939dd089`**.
+[Android CI run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) concluded **success**. Unit tests, build, emulator tests
+and signed-out browser observations passed. The tag-only release-publishing job was skipped as
+expected; the APK is delivered as a **workflow artifact**, not a tagged release.
 
-Source: `531d1cff64e2fb14e8a37411bc2316584c61299d`.
-[Android CI run 39165580281](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39165580281).
-**Superseded candidate: JVM/build/install checks passed; device run had 58 passes, 2 failures and 1 skip.** Fixes are being verified in the next run; this is not a final release verdict.
+## Results
 
-* **4,063 JUnit cases passed, zero failed/skipped**, reported by the current CI JVM job. This count
-  includes the inherited parameterized URL-table assertions, not 4,063 distinct end-user workflows.
-* The original seeded fuzz tests, exact allowlist/role/path regressions, source/manifest/resource
-  invariants and real loopback CONNECT socket tests run in that suite.
-* All 20 production Java files other than the allowlist match the original executable tokens after
-  recorded package/branding substitutions and removal of UA masking. The preservation script passed
-  locally and is a blocking CI step.
-* Debug and signed release APKs built; release badging/permissions/debug flag and `apksigner verify`
-  checks passed. The separate installed ID is `app.githubwebview.locked`, version 1.0.0 / code 1.
-* Release SHA-256: `48a8aa8f4c98c794b2204e45c8158ac041a17a69b6793dd545a1f6b968e5ba77`.
-  Installation/launch of **these exact artifact bytes** passed on the API 34 emulator; the release
-  guard became ready and opened a GitHub tunnel. This was actually performed, not inferred from build success.
+| Check | Actual outcome |
+|---|---|
+| Original source import | All 80 files in import `334f840` match Arena source `86008ec`; six archived historical reports remain verbatim |
+| Preserved implementation | All 20 non-configuration production Java files match upstream executable tokens after recorded identifiers/labels and the sole UA-honesty exception |
+| JVM suite | **4,151 passed; 0 failed; 0 skipped** |
+| Android suite | **61 reported: 60 passed; 0 failed; 1 skipped** |
+| Debug/release build | Both built; signed release passed badging, permissions/debug-flag and `apksigner verify` checks |
+| Exact release installation | PASS: installed and launched the downloaded build-apk artifact; egress guard ready and GitHub tunnel observed |
+| Browser observations | Separate signed-out Chrome observations completed; not substituted for Android/authentication results |
 
-## Device test scope
+The JVM count includes the inherited parameterized URL-table assertions; it does **not** mean 4,151
+independent end-user workflows. The suite includes seeded URL fuzzing, exact allowlist/role/path
+checks, immutable config/back-navigation/metrics tests, real loopback CONNECT socket tests, manifest,
+resource and source invariants. App ID is `app.githubwebview.locked`, version 1.0.0 / code 1.
 
-The emulator uses Android API 34 / x86_64 / Google APIs / Pixel 5, with a real WebView and software
-keyboard enabled. Device tests exercise the original navigation, redirect, popup, auth-window,
-back, recovery, settings, download/file-picker/intent and egress guards. Request-callback tests
-use synthetic destinations; the WebSocket/CONNECT probes use real sockets through the real proxy.
+Release SHA-256: `ab044ecc6ea2da7c76747c83fee35739e0de0324fd8eb93eb36d8f16c8aa1dd8`.
+[Download APK artifact](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163). [Device evidence](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152014368).
 
-Additional live tests deliberately distinguish the following:
+## Actual Android environment
 
-| Test | What it can establish | What it cannot establish |
+Android 14 / API 34, x86_64 Google APIs image, Pixel 5 profile, stock
+`com.google.android.webview` **113.0.5672.136**. The emulator exposes a hardware-keyboard configuration;
+software keyboard display was enabled for testing. The installed release is not debuggable.
+A contemporary WebView is recommended on real devices; this is evidence for the specific tested
+provider/version, not every Android/WebView combination.
+
+## Live input and rendering results
+
+### GitHub login — passed
+
+The real `https://github.com/login` form and its JavaScript initialized. Test-only native touch and
+input-connection operations typed `probe@example.invalid`, selected/edited it to
+`edited@example.invalid`, and observed the form's actual value. The software keyboard appeared;
+WebView height changed **2,138 → 1,371 px**. Both snapshots reported:
+
+* value lengths 21 / 22, respectively;
+* font size 16, input height 40;
+* `placeholderShown=false`;
+* `promptOverlaps=[]`.
+
+A native click on Sign in with the **password intentionally empty** triggered required-field client
+validation and kept the page on GitHub login. This did not submit a password or authenticate.
+The test observes the real form; it does not rewrite field values with JavaScript or patch its CSS.
+
+### Google's generic identifier form — passed, **not OAuth/login success**
+
+Google served its generic identifier form to the genuine WebView UA. The same native entry/editing
+and keyboard/geometry checks ran there, with height **2,138 → 1,371 px**, input height 52, font size 16,
+value lengths 21 / 22, `placeholderShown=false`, and `promptOverlaps=[]`.
+**No Next click, credential submission or authentication was performed in this diagnostic.** It is
+not an app fallback for GitHub's unavailable social-login flow. It specifically tests the field/rendering
+regression while preserving the gstatic and SUBDOCUMENT fixes from Arena.
+
+### Actual GitHub Google handoff — skipped, not passed
+
+`EmailInputRegressionTest.googleIdentifierInputAndValidationOnlyWhenProviderServesTheForm` was
+skipped because GitHub offered no Google control in this WebView. The normalized control probe
+reported `controls=[]`; the real UA retained `; wv`. The separate desktop Chrome observation did
+offer the button and followed it to `accounts.google.com/v3/signin/identifier`. Those are different
+browser contexts. Neither observation establishes a completed Google/GitHub sign-in.
+
+No UA disguise, custom browser identity, external browser/app fallback, CAPTCHA solving or provider
+restriction bypass was used. Real credentials are not requested, stored or included in the tests.
+
+## Site and guard coverage
+
+| Area | Performed | Boundary |
 |---|---|---|
-| Home page | GitHub HTML, loaded CDN styles, initialized site custom elements | Authentication or all site features |
-| Repository/file/commits/issues/PR/Actions pages | Signed-out browsing in the app, styles and approved final URLs | Creating an issue/PR, committing a change, running or editing a workflow |
-| Protected file/workflow edit links | GitHub's real login gate, not an invented editor or browser escape | Completing an authenticated edit/commit |
-| GitHub login input | Native IME typing and selection/editing; keyboard visibility and reduced WebView height; typed-value/placeholder and prompt-geometry assertions; native submit validation with an intentionally empty password | A real password submission, 2FA or account login; arbitrary device/font/IME combinations |
-| GitHub's actual Google button | Approved handoff in the main/in-app auth WebView; identifier typing/editing/validation only when the provider serves the form | Successful Google authentication; provider refusal is not bypassed and unavailable coverage is skipped |
-| Direct Google identifier probe | What Google's generic sign-in document serves to this WebView | GitHub OAuth success |
-| Signup/CAPTCHA observation | Referenced challenge resources and no refusal of configured challenge paths | Solving a CAPTCHA or creating an account |
+| Home | Real GitHub HTML, loaded CDN stylesheet objects and initialized GitHub custom elements | Not just a blank page evaluating `1+1` |
+| Repository, file, commits, issues, PR | Public pages rendered with styles inside the real app | Read-only/signed-out; no mutations |
+| Actions | Workflow-run list rendered with **25 run links**; completed-job page rendered | **0 log rows observed** signed-out; live/authenticated log streaming not verified |
+| File/workflow edit links | Both reached the real GitHub login gate without a browser escape | No authenticated edit or commit |
+| Signup/CAPTCHA | Real signup challenge resources inspected; no configured challenge host/path was refused | No challenge solved and no account created |
+| URL roles | Real Android callbacks driven with synthetic resource/frame/navigation/redirect/popup URLs | ASSET permission never grants a top-level page or auth window |
+| Egress | Real CONNECT sockets and a real WebSocket attempt to a refused host; all-process routing checked | Host/port boundary, not encrypted content/path inspection |
+| Escapes, back, recovery, settings | Original device guard tests retained and retargeted | Not a proof against every browser transport or OS behavior |
+| Signed release | Actual artifact installed, launched, guard-ready and GitHub connection confirmed | Detailed instrumented interactions run on debug, same application code; release debugging stays off |
 
-Input tests use reserved `example.invalid` addresses and **no password**. DOM inspection, test event
-observation, screenshots and IME calls exist only in `androidTest`, not the installed APK. The app has
-no input script/CSS overrides or JavaScript bridge. Screenshots are evidence captured by CI; no manual
-physical-device or visual review is claimed.
+The native form driver and DOM observations exist only in `androidTest`, not the APK. Screenshots
+were captured to the evidence artifact. No manual visual or physical-phone inspection is claimed.
+`resourceHosts` probe fields describe attempted resources, not necessarily successful fetches:
+telemetry such as `collector.github.com` and `play.google.com/log` remained refused.
 
-## Signed-out desktop observations (separate from Android)
+## Failures found, corrected and retained in history
 
-The Chrome/Playwright job actually followed GitHub's Google button to
-`accounts.google.com/v3/signin/identifier`. This proves a desktop handoff/resource observation,
-**not** Android authentication. It saw GitHub `/signup` return HTTP 403 with a DataDome challenge;
-the challenge frame, static image, CSS and font requests returned HTTP 200. No challenge was solved.
-The repository, file, issues, PR, Actions and completed-job pages returned HTTP 200.
-
-The default platform UA is retained in the APK. No desktop UA is substituted for a WebView UA.
-
-## Failures found and corrected during development
-
-| Run / source | Actual result | Follow-up |
+| Run / source | Actual result | What changed afterward |
 |---|---|---|
-| [39164490059](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39164490059) / `22a3168` | Unit/build passed; 55 device cases, 1 failed | A retargeted test still used an Arena Turnstile path on the Arkose host. Corrected the test; did not widen policy to accept the wrong path. |
-| [39164988590](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39164988590) / `4d54812` | 4,015 JVM cases passed; build passed; 61 device cases, 7 failed | Five tests stopped at a screenshot helper that incorrectly expected `UiAutomation.executeShellCommand` to interpret `&&`; changed it to separate commands with file-size verification. One actual policy regression exposed DataDome `/i.js`, now explicitly allowed alongside `/c.js`; the stale Arkose test was also corrected. |
+| [39164490059](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39164490059) / `22a3168` | Build/JVM passed; device 54 pass, 1 fail | Retargeted test still used an Arena Turnstile path on an Arkose host; corrected the test, not the allowlist to accept a wrong path |
+| [39164988590](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39164988590) / `4d54812` | 4,015 JVM pass; device 54 pass, 7 fail | Five screenshot-helper failures (`UiAutomation` does not interpret `&&`), one real DataDome `/i.js` path gap, plus the stale test |
+| [39165580281](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39165580281) / `531d1cf` | 4,063 JVM pass; device 58 pass, 2 fail, 1 skip; release installed | Versioned DataDome root bundle still blocked; mobile Actions assertion relied on a hidden repository-name label |
+| [39166545809](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39166545809) / `38d561d` | 4,103 JVM pass; device 59 pass, 1 fail, 1 skip | Native test touch injection was self-UID targeted while the IME changed windows; switched test touch dispatch and viewport coordinates |
+| [39167360418](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39167360418) / `dd9019a` | Build/JVM passed; device 59 pass, 1 fail, 1 skip | GitHub software-keyboard visibility assertion failed; kept it strict and investigated test-side IME binding |
+| [39167622790](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39167622790) / `c9a4547` | Whole run succeeded; device 60 pass, 0 fail, 1 skip | First complete passing run, including both native input diagnostics; further checks addressed repeatability and Google's observed connection-check iframe |
+| `c8257eb` / run 39168234333 | Pending run cancelled by workflow concurrency before execution | No tests claimed for this cancelled run |
+| [39168377245](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39168377245) / `105ca07` | 4,151 JVM pass; device 59 pass, 1 fail, 1 skip; release installed | GitHub IME visibility remained timing-sensitive; generic Google input passed |
+| [39169606407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39169606407) / `92ee140` | 4,151 JVM pass; device 59 pass, 1 fail, 1 skip; release installed | Explicit normal IME request alone was insufficient; final driver refreshes the native editor connection and gives its handshake a UI turn |
+| [39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) / `258e549` | **4,151 JVM pass; device 60 pass, 0 fail, 1 skip; exact release installed** | Delivered artifact |
 
-The desktop trace additionally exposed `static.captcha-delivery.com`, now an explicit ASSET-only
-entry. Earlier APKs are superseded candidates, not the final deliverable. Failure records are retained
-rather than relabeled as successful app tests.
+The app's input/rendering code was **not** changed to address test-driver timing. No failing test
+was deleted or relabeled as a skip. The final driver uses native touch/IME operations, not forced
+keyboard flags or production CSS/JS overrides. Passing this run does not establish an exhaustive
+stability, device, language or IME matrix.
 
-## Additional observed results from candidate `531d1cf`
+The final policy also explicitly scopes Google's observed
+`accounts.youtube.com/accounts/CheckConnection` as ASSET-only. YouTube navigation remains blocked.
+DataDome's dedicated versioned-script host is path-unrestricted ASSET, analogous to the preserved
+gstatic exception, rather than repeatedly pinning changing filenames. See [domains/roles](docs/DOMAINS.md).
 
-* GitHub native email entry/editing and client-validation test **passed**. The software keyboard was
-  visible; WebView height changed from **2,138 to 1,371 pixels**. Both typed/edited snapshots reported
-  `placeholderShown=false` and `promptOverlaps=[]`. No password or authenticated submission occurred.
-* GitHub did **not offer a Google button in the WebView**. The actual Google-handoff input test was
-  skipped, with that reason. The generic direct-Google probe did display an identifier form; that is
-  not the GitHub OAuth flow and is not reported as successful Google authentication.
-* Public repository, file, commit, issues and PR pages rendered; protected file/workflow edit routes
-  displayed GitHub login. The Actions page's repository-name text assertion failed; its next test
-  checks actual workflow-run links and captures the page before asserting, so failure is diagnosable.
-* A second real challenge-resource gap appeared: `/i.js` loads a versioned root-level script on
-  `ct.captcha-delivery.com`. This is now treated like gstatic: a reviewed path-unrestricted **ASSET**,
-  never a page, instead of repeatedly pinning changing script filenames. Required frames still use
-  the original SUBDOCUMENT rules.
+## Not performed / manual acceptance checklist
 
-## Not performed / remaining manual checks
+* [ ] Install on a physical phone alongside the original Arena app and confirm both remain usable.
+* [ ] Complete GitHub login/2FA with your own account; check session persistence. Never share credentials
+  in chat. Google/passkey/security-key/enterprise-provider support is not established by this run.
+* [ ] Repeat email editing, validation, font-size/language/IME changes and rotation on the target device.
+* [ ] Browse private repositories; edit/save/commit a file and a workflow; create/update issues and PRs.
+* [ ] Run a workflow and inspect authenticated running/completed logs, streaming and backscroll.
+* [ ] Confirm the expected blocked-link behavior for external destinations and Raw/archive navigation.
 
-* A completed GitHub or Google login, password/2FA/passkey/security-key authentication, persistent
-  authenticated sessions, enterprise SSO, account creation or CAPTCHA completion.
-* Authenticated file editing/saving/committing, issue/PR writes, workflow editing or dispatch, private
-  repository access, and live authenticated Actions log streaming/backscroll.
-* A physical phone test, keyboard/language/font-size/rotation matrix, Android API 24/35 device matrix,
-  and visual review of all screenshots. Only the configured API 34 emulator is claimed.
-* Downloads, external browser/app launches and file pickers are deliberately disabled as in Arena;
-  they are not pending features. Raw/archive ASSET hosts never become browsing destinations.
-* Some regional Actions transports are dynamic; no blanket `*.actions.githubusercontent.com` or
-  cloud-host wildcard was added. Unknown hosts fail closed and require a reviewed exact entry.
+Downloads, file pickers, unapproved external destinations and app/browser launches remain deliberately
+disabled, not pending features. Unknown regional Actions transports fail closed; no wildcard
+`*.actions.githubusercontent.com`, S3, Azure or Google allowance was added.
 
-Before relying on authenticated workflows, install the release alongside Arena, sign in on the device
-with your own account (do not share credentials), and exercise those workflows. If a provider rejects
-embedded sign-in, that limitation remains; the app does not hide its identity or launch a browser.
+## Local checks versus Actions
 
-## Local versus CI checks
-
-This editing sandbox cannot reach Android/Gradle artifact servers. Local work verified resource XML,
-JavaScript/shell syntax, Git diffs and the preserved-core fingerprints. Android compilation, JVM tests,
-signing verification and emulator tests actually run in GitHub Actions. The current report does not
-borrow counts or results from the historical Arena reports in `docs/upstream-arena/`.
+This editing sandbox cannot reach Android/Gradle artifact servers. Local checks were resource XML,
+JavaScript/shell syntax, Git diffs, the complete upstream import comparison and preserved-core
+fingerprints. Compilation, JVM tests, APK signature/badging, installation and emulator tests actually
+ran in GitHub Actions. No historical Arena pass count is reused as GitHub verification.
