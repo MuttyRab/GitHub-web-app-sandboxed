@@ -218,6 +218,7 @@ jobs:
             adb logcat -c || true
             adb shell settings put secure show_ime_with_hard_keyboard 1
             adb shell dumpsys webviewupdate > docs/evidence/webview-provider.txt
+            echo "::notice title=WebView provider::$(tr '\n' ' ' < docs/evidence/webview-provider.txt)"
             adb shell getprop ro.build.version.release > docs/evidence/android-version.txt
             ( ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace; echo $? > /tmp/gradle-exit ) 2>&1 | tee /tmp/gradle-instrumented.log
             test "$(cat /tmp/gradle-exit)" = 0 || echo "instrumented tests reported failures" > /tmp/instrumented-failed
@@ -298,6 +299,8 @@ jobs:
                   ('Live probes on the device', r'live smoke|probe|evaluateJavascript', 20),
                   ('Email input probes', r'input probe', 24),
                   ('GitHub workflow probes', r'github workflow probe', 20),
+                  ('Actions page and completed-job probes', r'github workflow probe (?:actions|completed-job)', 6),
+                  ('JavaScript errors on device', r'console:.*(?:TypeError|SyntaxError|ReferenceError|Unhandled)', 20),
                   ('Policy counters on the device', r'TUNNELS|NAVIGATIONS|BLOCKED_REQUESTS|RECOVERY|RELOADS', 24),
                   ('Refused sub-resources on the device', r'refused sub-resource', 15),
               ]

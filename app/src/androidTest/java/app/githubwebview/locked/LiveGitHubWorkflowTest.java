@@ -32,13 +32,18 @@ public class LiveGitHubWorkflowTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             for (String[] route : routes) {
                 LivePageSupport.load(scenario, "https://github.com" + route[1]);
-                assertTrue("signed-out GitHub route must render: " + route[0],
-                        LivePageSupport.waitFor(scenario,
-                                "location.hostname==='github.com' && location.pathname===" + JSONObject.quote(route[1])
-                                        + " && document.readyState==='complete' && document.body"
-                                        + " && document.body.innerText.includes('Arena.ai-apk')", 45_000));
+                String content = route[0].equals("actions")
+                        ? "!!document.querySelector('a[href*=\"/actions/runs/\"]')"
+                        : (route[0].equals("completed-job")
+                                ? "document.body.innerText.includes('Instrumented tests')"
+                                : "document.body.innerText.includes('Arena.ai-apk')");
+                boolean rendered = LivePageSupport.waitFor(scenario,
+                        "location.hostname==='github.com' && location.pathname===" + JSONObject.quote(route[1])
+                                + " && document.readyState==='complete' && document.body && (" + content + ")", 45_000);
                 JSONObject probe = LivePageSupport.object(scenario, """
-                        (function(){return {path:location.pathname, title:document.title,
+                        (function(){return {path:location.pathname, ready:document.readyState, title:document.title,
+                          bodyPreview:document.body ? document.body.innerText.substring(0,900) : null,
+                          actionRunLinks:document.querySelectorAll('a[href*="/actions/runs/"]').length,
                           loadedStyles:[...document.querySelectorAll('link[rel=stylesheet]')].filter(l=>!!l.sheet).length,
                           logRows:document.querySelectorAll('.check-log-line,.check-log-text,[data-testid=log-viewer]').length,
                           signInText:/sign in.*(?:view|logs)|must be logged in/i.test(document.body.innerText),
@@ -46,10 +51,13 @@ public class LiveGitHubWorkflowTest {
                             try{return new URL(r.name).hostname}catch(e){return ''}
                           }))].filter(Boolean).sort()};})()
                         """);
+                if (rendered) probe.remove("bodyPreview");
+                // Capture the failing page BEFORE the assertion so a failed render is diagnosable.
+                Log.i("GitHubWebViewLocked", "github workflow probe " + route[0] + " rendered=" + rendered + ": " + probe);
+                LivePageSupport.screenshot("github-" + route[0]);
+                assertTrue("signed-out GitHub route must render " + route[0] + ": " + probe, rendered);
                 assertTrue("styles should not be missing on " + route[0], probe.getInt("loadedStyles") > 0);
                 assertTrue(GitHubAllowlist.productionConfig().isProductNavigation(LivePageSupport.url(scenario)));
-                Log.i("GitHubWebViewLocked", "github workflow probe " + route[0] + ": " + probe);
-                LivePageSupport.screenshot("github-" + route[0]);
             }
         }
     }

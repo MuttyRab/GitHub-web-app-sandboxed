@@ -20,7 +20,7 @@ embedded document. Redirects and pop-ups do not convert an ASSET into a navigati
 * From this editing network, `/signup` returned a DataDome interstitial referencing
   `ct.captcha-delivery.com/c.js` and `geo.captcha-delivery.com`. These are explicitly resource-only
   challenge allowances; this observation is network-specific, not a claim that all GitHub users
-  see DataDome. The Android signup probe additionally requested `/i.js` on `ct.captcha-delivery.com`. The signed-out Chrome trace also requested `static.captcha-delivery.com`; it is resource-only. No challenge was solved or bypassed.
+  see DataDome. The Android signup probe additionally requested `/i.js` and `/interstitial.1.33.1.202610161.js` on `ct.captcha-delivery.com`. Pinning only bootstrap files caused an actual blocked-script failure; this dedicated challenge-asset host is therefore a reviewed path-unrestricted ASSET exception, like gstatic. The signed-out Chrome trace also requested `static.captcha-delivery.com`; it is resource-only. No challenge was solved or bypassed.
 * GitHub supports Google social sign-in. [1](https://github.blog/changelog/2025-07-15-social-login-with-google-is-now-generally-available/)
   The original Google identity entries and reCAPTCHA support are retained. The exact opaque
   gstatic identity-bundle paths must not be repinned to `/accounts/`: that caused the original
@@ -102,7 +102,7 @@ interchangeable evidence. See [../TEST_REPORT.md](../TEST_REPORT.md) for actual 
 | `client-api.arkoselabs.com` | ASSET | `/fc/`, `/v2/` |
 | `static.captcha-delivery.com` | ASSET | Any path |
 | `geo.captcha-delivery.com` | ASSET | `/captcha/`, `/interstitial/` |
-| `ct.captcha-delivery.com` | ASSET | `/c.js`, `/i.js` |
+| `ct.captcha-delivery.com` | ASSET | Any path |
 
 **65 exact hosts:** 2 PRODUCT,
 1 SIGN_IN,
@@ -110,8 +110,8 @@ interchangeable evidence. See [../TEST_REPORT.md](../TEST_REPORT.md) for actual 
 `AllowlistRegressionTest` pins the literal list, roles and reviewed path exceptions.
 
 ASSET is a URL role, not an enforced MIME type. Paths are **prefixes**, using the original engine's
-raw-path checks (no percent escapes or `..` in pinned paths). For example `/c.js` is a prefix,
-not an exact-file matcher. The proxy cannot inspect encrypted paths or every redirect hop; see
+raw-path checks (no percent escapes or `..` in pinned paths). These are prefix rules,
+not exact-file matchers. The proxy cannot inspect encrypted paths or every redirect hop; see
 [../SECURITY.md](../SECURITY.md).
 
 ## Intentionally not approved

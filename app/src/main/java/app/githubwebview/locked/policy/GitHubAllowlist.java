@@ -261,8 +261,11 @@ public final class GitHubAllowlist {
                 "DataDome static challenge assets observed in the signed-out browser trace; never a page."));
         entries.add(AllowEntry.resourceOnly("geo.captcha-delivery.com", paths("/captcha/", "/interstitial/"),
                 "DataDome challenge frame observed on github.com/signup from this network; never a page."));
-        entries.add(AllowEntry.resourceOnly("ct.captcha-delivery.com", paths("/c.js", "/i.js"),
-                "DataDome challenge/interstitial scripts observed on github.com/signup. Prefix restriction, as in the original engine."));
+        // The bootstrap loads versioned root-level bundles, e.g. /interstitial.1.33.1.202610161.js.
+        // Pinning only /c.js and /i.js produced a real blocked-script failure on the emulator. As for
+        // gstatic, keep this dedicated challenge-asset host path-unrestricted but NEVER navigable.
+        entries.add(AllowEntry.resourceOnly("ct.captcha-delivery.com", Collections.<String>emptyList(),
+                "DataDome challenge/interstitial bootstrap and versioned JS bundles observed on signup; assets only."));
         return Collections.unmodifiableList(entries);
     }
 

@@ -449,6 +449,8 @@ public final class PolicyCases {
                 "https://geo.captcha-delivery.com/interstitial/",
                 "https://ct.captcha-delivery.com/c.js",
                 "https://ct.captcha-delivery.com/i.js",
+                "https://ct.captcha-delivery.com/interstitial.1.33.1.202610161.js",
+                "https://ct.captcha-delivery.com/future/deployment/bundle.js",
                 "https://static.captcha-delivery.com/captcha/assets/challenge.css",
                 "https://images.ctfassets.net/8aevphvgewt8/image.png",
                 "https://videos.ctfassets.net/8aevphvgewt8/video.mp4"}) {
@@ -461,7 +463,6 @@ public final class PolicyCases {
                 "https://github-api.arkoselabs.com/fc/../other",
                 "https://client-api.arkoselabs.com/fc%2fescape",
                 "https://geo.captcha-delivery.com/marketing/",
-                "https://ct.captcha-delivery.com/other.js",
                 "https://images.ctfassets.net/other-space/image.png"}) {
             sub(cases, "outside reviewed path " + resource, resource, false, BlockReason.PATH_NOT_ALLOWED);
         }

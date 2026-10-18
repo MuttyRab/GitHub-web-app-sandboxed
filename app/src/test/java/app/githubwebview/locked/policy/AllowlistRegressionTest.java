@@ -176,7 +176,7 @@ public class AllowlistRegressionTest {
         List<String> deliberatelyUnrestricted = new ArrayList<String>(EXPECTED_SERVICE_HOSTS);
         deliberatelyUnrestricted.remove("images.ctfassets.net");
         deliberatelyUnrestricted.remove("videos.ctfassets.net");
-        deliberatelyUnrestricted.addAll(Arrays.asList("ssl.gstatic.com", "www.gstatic.com", "octocaptcha.com", "static.captcha-delivery.com"));
+        deliberatelyUnrestricted.addAll(Arrays.asList("ssl.gstatic.com", "www.gstatic.com", "octocaptcha.com", "static.captcha-delivery.com", "ct.captcha-delivery.com"));
         for (AllowEntry entry : GitHubAllowlist.activeEntries()) {
             if (entry.isProduct() || entry.isSignIn() || entry.isPathRestricted()) {
                 continue;
@@ -336,7 +336,8 @@ public class AllowlistRegressionTest {
         assertEquals(Arrays.asList("/fc/", "/v2/"), config.findByHost("github-api.arkoselabs.com").pathPrefixes());
         assertEquals(Arrays.asList("/fc/", "/v2/"), config.findByHost("client-api.arkoselabs.com").pathPrefixes());
         assertEquals(Arrays.asList("/captcha/", "/interstitial/"), config.findByHost("geo.captcha-delivery.com").pathPrefixes());
-        assertEquals(Arrays.asList("/c.js", "/i.js"), config.findByHost("ct.captcha-delivery.com").pathPrefixes());
+        assertTrue("versioned root-level DataDome bundles must not be repinned",
+                config.findByHost("ct.captcha-delivery.com").pathPrefixes().isEmpty());
         for (String host : Arrays.asList("images.ctfassets.net", "videos.ctfassets.net")) {
             assertEquals(Arrays.asList("/8aevphvgewt8/"), config.findByHost(host).pathPrefixes());
             assertFalse(config.evaluateRequest("https://" + host + "/another-space/image.png").isAllowed());
