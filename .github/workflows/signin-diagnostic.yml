@@ -1,0 +1,37 @@
+name: Sign-in diagnosis (read-only)
+
+on:
+  push:
+    branches:
+      - 'arena/d30b97e2-github-web-app-sandboxed'
+    paths:
+      - 'scripts/diagnose-google-option.cjs'
+      - '.github/workflows/signin-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Compare login rendering, without authentication
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install diagnostic tooling
+        run: npm install --prefix "$RUNNER_TEMP/signin-probe" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Read-only browser identification comparison
+        env:
+          NODE_PATH: ${{ runner.temp }}/signin-probe/node_modules
+        run: node scripts/diagnose-google-option.cjs
+      - name: Publish diagnosis (no credentials or OAuth submissions)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signin-diagnostic
+          path: site-observations/signin-diagnosis/**
+          retention-days: 30

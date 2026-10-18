@@ -1,0 +1,30 @@
+# Build output
+.gradle/
+build/
+*.apk
+*.aab
+*.aar
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+captures/
+
+# Emulator / test output (kept out of git; uploaded as CI artifacts instead)
+*.hprof
+test-results/
+screenshots/
+
+# NOTE: gradle/wrapper/gradle-wrapper.jar IS committed (it is required to build), and so is the
+# demo signing keystore in keystore/. Neither is ignored on purpose.
+
+# Passive/Android evidence is uploaded as CI artifacts, not source.
+site-observations/
+site-observations.log
+docs/evidence/
+
+__pycache__/

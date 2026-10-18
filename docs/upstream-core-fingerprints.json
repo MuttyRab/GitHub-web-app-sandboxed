@@ -1,0 +1,151 @@
+{
+  "upstreamRepository": "https://github.com/markcollege2026-droid/Arena.ai-apk",
+  "upstreamCommit": "86008ec377e7dddf94f33c1b36a6eb8395cd867e",
+  "verbatimImportCommit": "334f840d5ad65c060edf89a6a797f93572e52949",
+  "configurationFile": "app/src/main/java/app/githubwebview/locked/policy/GitHubAllowlist.java",
+  "substitutions": [
+    [
+      "app.arenawebview.locked",
+      "app.githubwebview.locked"
+    ],
+    [
+      "ArenaAllowlist",
+      "GitHubAllowlist"
+    ],
+    [
+      "ArenaWebChromeClient",
+      "GitHubWebChromeClient"
+    ],
+    [
+      "ArenaWebViewClient",
+      "GitHubWebViewClient"
+    ],
+    [
+      "ArenaWebViewLocked",
+      "GitHubWebViewLocked"
+    ],
+    [
+      "arena_webview",
+      "github_webview"
+    ],
+    [
+      "Arena WebView (locked)",
+      "GitHub WebView (locked)"
+    ],
+    [
+      "arena-webview-locked",
+      "github-webview-locked"
+    ],
+    [
+      "Arena.ai",
+      "GitHub"
+    ],
+    [
+      "arena.ai",
+      "github.com"
+    ]
+  ],
+  "behavioralException": "WebViewHardening: remove the inherited user-agent masking block, retaining the genuine platform WebView UA. No other runtime code change.",
+  "files": {
+    "app/src/main/java/app/githubwebview/locked/MainActivity.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/MainActivity.java",
+      "upstreamFileSha256": "32a625997c40054079b95a4d4533656d0edaecbe52d62e90570a18f08fbd2921",
+      "adaptedCodeSha256": "f54811715ebe52aafae1b026872bc7a05fd2aa2ea8e10ebc67adffed2f8e350f"
+    },
+    "app/src/main/java/app/githubwebview/locked/net/EgressProxy.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/net/EgressProxy.java",
+      "upstreamFileSha256": "19b00fb7a0ab8b35a48e2d87cea8751d943b6aacc35bc62bf5cc1e17e31e995f",
+      "adaptedCodeSha256": "01d3d4194da094c79dc978e9431d94bb193f95982516e0d4e1ec6ecfc1131bc8"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/AllowEntry.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/AllowEntry.java",
+      "upstreamFileSha256": "93fde621c26315a0f2ecca885fbd2e3ba4bca96c03e32810bbe36713dc90c485",
+      "adaptedCodeSha256": "1e2d1081de2acbe28e7fde0c4bfc515ae065c343b9314f774cc4aa44f5572c17"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/BackNavigator.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/BackNavigator.java",
+      "upstreamFileSha256": "8ba14a22137a1341ab2e6edc9b06e6860d87d6c6f88fb9d7f7cacac715546836",
+      "adaptedCodeSha256": "5d86a692f82fa8db9631a882a71edcc1a77f7723ecdb26507cd41f4684473896"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/BlockReason.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/BlockReason.java",
+      "upstreamFileSha256": "f7cb4383c2035c4fa357c3ac2e4fe5ccc02856ba2e1b887785380ca42a48597a",
+      "adaptedCodeSha256": "74c0578996b3530281405914c77d2f87e6f941c6cbd8e1856ddcb923897a6aa0"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/PolicyConfig.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/PolicyConfig.java",
+      "upstreamFileSha256": "140f8ad36c7b91a582305065d0de04a64e1fd2b3b4aec0837acaef6e6b58d23d",
+      "adaptedCodeSha256": "d776e48ce8ed6d963bea8048add2f5c19553fdd504582f122e71dab306dd5e62"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/PolicyMetrics.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/PolicyMetrics.java",
+      "upstreamFileSha256": "6d551d555ba0e4a9cdaf1589739922db88ed25824db8d694928ed4e958169511",
+      "adaptedCodeSha256": "af114025be73a79276b8674c8b5cffeca719c10f19e63b0fe7ff1b912969f8df"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/PolicyResult.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/PolicyResult.java",
+      "upstreamFileSha256": "b7e76955064d4da9e66bfa8df59d7e3de4910637e14986d1d36fb1d930054735",
+      "adaptedCodeSha256": "f8381a8b736d074ec52e40ab3d23dd4e46c8b00e5b4cd3eea996129edf6eb3ae"
+    },
+    "app/src/main/java/app/githubwebview/locked/policy/UrlPolicy.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/policy/UrlPolicy.java",
+      "upstreamFileSha256": "e0d774cf904f6da790d87a52de5f3bf1581c69fc9d69eeb22d911eb0a421862c",
+      "adaptedCodeSha256": "93d793829bbda7aaac38171615dd2e0b596fd27335205eda165d4f8432df1b99"
+    },
+    "app/src/main/java/app/githubwebview/locked/ui/AuthWindow.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/ui/AuthWindow.java",
+      "upstreamFileSha256": "0e64671444b1d45d238e53e2b8c8be5e998ed20fcc7d35e7f67bfd468c2d8b42",
+      "adaptedCodeSha256": "51b2cc411fae70fa24d7633f7f9b7d2fcad838d8b3ebd6317ec641b2c085e7e8"
+    },
+    "app/src/main/java/app/githubwebview/locked/ui/PullToRefreshFrame.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/ui/PullToRefreshFrame.java",
+      "upstreamFileSha256": "5ae6eedd59c6f4cff43c9e079887708befcaaf00b2d71e395c9daf1d75fac5f7",
+      "adaptedCodeSha256": "ac58383c1163650a89be741f8ad97b651bef32326efb9802be4fe6f0e173a197"
+    },
+    "app/src/main/java/app/githubwebview/locked/ui/StatusOverlay.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/ui/StatusOverlay.java",
+      "upstreamFileSha256": "55172b093509fabcfd58765288213e6406bcb3d561a5e369f88b998ee65f3668",
+      "adaptedCodeSha256": "d3da5d188f59564249d80115a88343b56895ddc58ec6012c3e9ed37c3270ca17"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/GitHubWebChromeClient.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/ArenaWebChromeClient.java",
+      "upstreamFileSha256": "3c9ece45926ad755e4bf953d9586fb51ac8c2852c77569a1d148f0b7cd4e7b89",
+      "adaptedCodeSha256": "9dc992b4f2b633f5288689af1af72d011492d9b9c868e8b14f70bae71e125f16"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/GitHubWebViewClient.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/ArenaWebViewClient.java",
+      "upstreamFileSha256": "f58b8afbeda37328611a6a9d8945d010378e0398c00601558ca01f202f2886cc",
+      "adaptedCodeSha256": "645f5f2f6f641dc5c0903f79357b29c992800ee798453b53f5f3f20c434018c6"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/BaseGuardHost.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/BaseGuardHost.java",
+      "upstreamFileSha256": "0e05ce0a9b01b0d4d7bfe44fbe849480cb97d7e7a8659938539b7e2211d4abda",
+      "adaptedCodeSha256": "73cae7f9945e6ed9efd38ac5832d72e3cda12925f83a0d247aab8a4ae348e849"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/BlockedResponses.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/BlockedResponses.java",
+      "upstreamFileSha256": "a8a5cd690bcbf04b604e392ed1b6be0a6561d5ef1ffb349eb62a8af36f1b6cf7",
+      "adaptedCodeSha256": "08120a05cecb794c4a439c552c529a5f4cbafcfc6483836b474b49defc992a01"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/EgressGuard.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/EgressGuard.java",
+      "upstreamFileSha256": "4f62d022c58ac03f63ceaab285c2fafe7e7d66ab96a3183c103f61bdef10ffde",
+      "adaptedCodeSha256": "465ad87dcb41b84ebc11926ce7d266ae8c90c817f16a062f148b984760a3fbb8"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/GuardHost.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/GuardHost.java",
+      "upstreamFileSha256": "59961f3f5fc0eced104baf4d231112e1e6e29f65257f297f404cd6b7401ed86d",
+      "adaptedCodeSha256": "01b257fe8663bc6d27681e387272671ac8a4e289e1a71ed333a3d8b575dbc330"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/PopupRouterClient.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/PopupRouterClient.java",
+      "upstreamFileSha256": "7b97c8bb76b770c31be691c13bfdaeac5024b0cb3d5107495e064929bdcba762",
+      "adaptedCodeSha256": "9c8f18a2918c341e6be95f060ae4ee9b5dcc70620a98d4739b23cd042734a3f6"
+    },
+    "app/src/main/java/app/githubwebview/locked/web/WebViewHardening.java": {
+      "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/WebViewHardening.java",
+      "upstreamFileSha256": "b9c73a70a640c10ef6e38cade5df855f62ad9dac0e28682d99d511062c13c2b0",
+      "adaptedCodeSha256": "3517bbd4abfcc00e847cf61fdcd11de15fc347f78480d1fcfa061a3c1b6947d3"
+    }
+  }
+}
