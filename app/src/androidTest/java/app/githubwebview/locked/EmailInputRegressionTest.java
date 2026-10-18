@@ -143,6 +143,9 @@ public class EmailInputRegressionTest {
 
     static void exerciseNativeInput(ActivityScenario<MainActivity> scenario, String selector,
                                              String name) throws Exception {
+        // GitHub autofocuses this field on load. Clear that test precondition so the assertion below
+        // proves the physical tap focused it, rather than accepting an already-focused DOM element.
+        LivePageSupport.evaluate(scenario, "if(document.activeElement)document.activeElement.blur();");
         scenario.onActivity(a -> {
             WebView w = LivePageSupport.activeView(a);
             ((InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE))
@@ -155,7 +158,9 @@ public class EmailInputRegressionTest {
                 "document.activeElement===document.querySelector(" + JSONObject.quote(selector) + ")", 8_000));
         LivePageSupport.showKeyboard(scenario);
         long until = SystemClock.elapsedRealtime() + 8_000;
-        while (SystemClock.elapsedRealtime() < until && !LivePageSupport.keyboardVisible(scenario)) Thread.sleep(200);
+        while (SystemClock.elapsedRealtime() < until && (!LivePageSupport.keyboardVisible(scenario)
+                || LivePageSupport.height(scenario) >= before)) Thread.sleep(200);
+        Thread.sleep(350); // record settled window bounds, not the first frame of the IME transition
         int resized = LivePageSupport.height(scenario);
         Log.i(TAG, "input probe " + name + " keyboard visible=" + LivePageSupport.keyboardVisible(scenario)
                 + " WebViewHeight=" + before + " -> " + resized);

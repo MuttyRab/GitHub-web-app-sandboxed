@@ -119,24 +119,30 @@ final class LivePageSupport {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         long now = SystemClock.uptimeMillis();
         MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, xy[0], xy[1], 0);
-        MotionEvent up = MotionEvent.obtain(now, now + 80, MotionEvent.ACTION_UP, xy[0], xy[1], 0);
+        MotionEvent up = null;
         down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
         try {
-            // Use UiAutomation's real input dispatcher, as UIAutomator does. sendPointerSync is
-            // self-UID-targeted and can reject the UP event when focusing the field opens the IME
-            // between DOWN and UP. This test-only privilege does not change app permissions.
+            // A genuine timed gesture through UiAutomation, not self-UID-targeted input. The IME
+            // can create a different-UID window while a field gains focus between DOWN and UP.
             assertTrue("touch DOWN dispatched", instrumentation.getUiAutomation().injectInputEvent(down, true));
+            SystemClock.sleep(100);
+            up = MotionEvent.obtain(now, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, xy[0], xy[1], 0);
+            up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
             assertTrue("touch UP dispatched", instrumentation.getUiAutomation().injectInputEvent(up, true));
-        } finally { down.recycle(); up.recycle(); }
+        } finally { down.recycle(); if (up != null) up.recycle(); }
         instrumentation.waitForIdleSync();
     }
 
     static void showKeyboard(ActivityScenario<MainActivity> scenario) {
         scenario.onActivity(a -> {
             WebView view = activeView(a);
+            view.requestFocusFromTouch();
             InputMethodManager ime = (InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE);
-            ime.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            if (!ime.isActive(view)) ime.restartInput(view);
+            boolean accepted = ime.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            android.util.Log.i("GitHubWebViewLocked", "input probe IME request: windowFocus="
+                    + view.hasWindowFocus() + " viewFocus=" + view.hasFocus()
+                    + " served=" + ime.isActive(view) + " accepted=" + accepted);
         });
     }
 
