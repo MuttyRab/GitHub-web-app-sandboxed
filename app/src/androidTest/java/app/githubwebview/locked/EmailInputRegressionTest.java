@@ -164,8 +164,22 @@ public class EmailInputRegressionTest {
         int resized = LivePageSupport.height(scenario);
         Log.i(TAG, "input probe " + name + " keyboard visible=" + LivePageSupport.keyboardVisible(scenario)
                 + " WebViewHeight=" + before + " -> " + resized);
-        assertTrue("the real software keyboard must be visible", LivePageSupport.keyboardVisible(scenario));
-        assertTrue("adjustResize must reduce WebView height", resized > 0 && resized < before);
+        boolean shown = LivePageSupport.keyboardVisible(scenario);
+        if (!shown) {
+            JSONObject field = LivePageSupport.object(scenario,
+                    "(function(){var e=document.querySelector(" + JSONObject.quote(selector)
+                            + ");return {type:e.type,readOnly:e.readOnly,disabled:e.disabled,inputMode:e.inputMode,"
+                            + "focused:document.activeElement===e,documentFocus:document.hasFocus()};})()");
+            Log.i(TAG, "input probe missing IME field state=" + field);
+            String dump = LivePageSupport.shell("dumpsys input_method");
+            StringBuilder selected = new StringBuilder();
+            for (String line : dump.split("\n")) {
+                if (line.matches(".*(mShowRequested|mInputShown|mImeWindowVis|mShowExplicitlyRequested|mShowForced|mCurMethodId|inputType=).*"))
+                    selected.append(line.trim()).append(" ; ");
+                if (selected.length() > 1600) break;
+            }
+            Log.i(TAG, "input probe missing IME service state=" + selected);
+        }
         LivePageSupport.type(scenario, ADDRESS);
         assertTrue("native typed email must reach the form", LivePageSupport.waitFor(scenario,
                 "document.querySelector(" + JSONObject.quote(selector) + ").value===" + JSONObject.quote(ADDRESS), 8_000));
@@ -176,6 +190,10 @@ public class EmailInputRegressionTest {
                 "document.querySelector(" + JSONObject.quote(selector) + ").value===" + JSONObject.quote(EDITED), 8_000));
         assertClearPrompt(scenario, selector, name);
         LivePageSupport.screenshot(name + "-email-edited");
+        // Do not abort typing/overlap observations merely because keyboard automation failed, but
+        // still fail the test (never turn an unverified keyboard into a pass).
+        assertTrue("the real software keyboard must be visible", shown);
+        assertTrue("adjustResize must reduce WebView height", resized > 0 && resized < before);
     }
 
     private static void assertClearPrompt(ActivityScenario<MainActivity> scenario, String selector, String name) throws Exception {

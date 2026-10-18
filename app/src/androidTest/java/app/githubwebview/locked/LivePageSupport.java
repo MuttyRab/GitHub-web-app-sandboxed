@@ -136,17 +136,21 @@ final class LivePageSupport {
     static void showKeyboard(ActivityScenario<MainActivity> scenario) {
         scenario.onActivity(a -> {
             WebView view = activeView(a);
-            view.requestFocusFromTouch();
             InputMethodManager ime = (InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (!ime.isActive(view)) ime.restartInput(view);
-            // This follows a real user tap, so use an explicit normal request (flags=0), NOT
-            // SHOW_IMPLICIT: on the emulator's hardware-keyboard configuration a trailing implicit
-            // request can supersede/suppress Chromium's pending explicit touch request. Never use
-            // SHOW_FORCED, never change the app's own input settings.
-            boolean accepted = ime.showSoftInput(view, 0);
-            android.util.Log.i("GitHubWebViewLocked", "input probe IME request: windowFocus="
-                    + view.hasWindowFocus() + " viewFocus=" + view.hasFocus()
-                    + " served=" + ime.isActive(view) + " accepted=" + accepted);
+            EditorInfo info = new EditorInfo();
+            InputConnection connection = view.onCreateInputConnection(info);
+            android.util.Log.i("GitHubWebViewLocked", "input probe editor: type=" + info.inputType
+                    + " options=" + info.imeOptions + " connection=" + (connection != null));
+            // An active WebView is not necessarily a served *text editor*: the IMM may still hold
+            // the connection from its initial empty document. Refresh that test-side connection
+            // after real DOM/touch focus, then give the renderer/IME handshake a UI turn.
+            ime.restartInput(view);
+            view.postDelayed(() -> {
+                boolean accepted = ime.showSoftInput(view, 0); // explicit normal request, NOT forced
+                android.util.Log.i("GitHubWebViewLocked", "input probe IME request: windowFocus="
+                        + view.hasWindowFocus() + " viewFocus=" + view.hasFocus()
+                        + " served=" + ime.isActive(view) + " accepted=" + accepted);
+            }, 300);
         });
     }
 
