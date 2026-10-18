@@ -19,17 +19,17 @@ def signingKeyPassword = System.getenv('SIGNING_KEY_PASSWORD') ?: 'arenawebview'
 def signingStoreType = System.getenv('SIGNING_STORE_TYPE') ?: 'PKCS12'
 
 android {
-    namespace 'app.arenawebview.locked'
+    namespace 'app.githubwebview.locked'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'app.arenawebview.locked'
+        applicationId 'app.githubwebview.locked'
         // WebView is updated through the Play Store independently of the OS, so a low minSdk still gets
         // a modern Chromium. 24 (Android 7.0) keeps the app usable on old hardware.
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName '1.2.0'
+        versionCode 1
+        versionName '1.0.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
