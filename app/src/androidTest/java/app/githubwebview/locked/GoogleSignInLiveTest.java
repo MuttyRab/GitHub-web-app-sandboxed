@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * <ul>
  *   <li><b>Policy</b> (asserted): the app may reach Google's sign-in host, the page that comes back is
  *       served by an allowed host, and the wrapper never ends up anywhere else.</li>
- *   <li><b>Google's own decision</b> (logged, not asserted): Google refuses to serve its sign-in form to
+ *   <li><b>Google's own decision</b> (logged, not asserted): Google may refuse to serve its sign-in form to
  *       embedded WebViews - {@code accounts.google.com} answers with a "this browser or app may not be
- *       secure" page, because an embedded browser is indistinguishable from a phishing overlay. That is
+ *       secure" page, under its embedded-user-agent security policy. That is
  *       Google's server-side choice; the probe below reports which of the two pages arrived, so the test
  *       report can state the outcome instead of guessing at it.</li>
  * </ul>
@@ -53,7 +53,7 @@ public class GoogleSignInLiveTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> activity.loadVerifiedDestination(SIGN_IN_URL, "test:google-signin"));
             String url = waitForLoad(scenario);
-            Log.i(TAG, "google sign-in probe: url=" + url);
+            Log.i(TAG, "google sign-in probe: url=" + (url == null ? "null" : url.split("[?#]", 2)[0]));
 
             if (url == null || url.isEmpty()) {
                 Log.w(TAG, "google sign-in probe: nothing loaded within " + LOAD_TIMEOUT_MS

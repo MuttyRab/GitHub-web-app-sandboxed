@@ -19,6 +19,9 @@ on:
       - 'arena/**'
     tags:
       - 'v*'
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/observed-github-csp.txt'
   pull_request:
   workflow_dispatch:
 
@@ -172,7 +175,8 @@ jobs:
   instrumented-tests:
     name: Instrumented tests (emulator)
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [unit-tests, build-apk]
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -185,6 +189,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Download the exact signed APK for installation verification
+        uses: actions/download-artifact@v4
+        with:
+          name: github-webview-apk
+          path: ${{ runner.temp }}/verified-apks
 
       - name: Enable KVM for the emulator
         run: |
@@ -235,7 +245,8 @@ jobs:
             echo "=== egress guard on the device ==="
             grep -E "egress" docs/evidence/device-logcat.txt | head -n 40 || true
             cp /tmp/gradle-instrumented.log docs/evidence/gradle-instrumented.log || true
-            test ! -f /tmp/instrumented-failed
+            bash scripts/verify-release-on-device.sh "$RUNNER_TEMP/verified-apks" docs/evidence || touch /tmp/release-install-failed
+            test ! -f /tmp/instrumented-failed && test ! -f /tmp/release-install-failed
 
       # Failures are surfaced as workflow annotations (readable from the Checks API and the run page
       # without downloading the artifact or the raw log): one per failed test, plus the Gradle tail when

@@ -44,7 +44,7 @@ const pages = [
         inputTypes: [...document.querySelectorAll('input')].filter(n => n.type !== 'hidden')
           .map(n => ({ type: n.type, id: n.id, name: n.name, placeholder: n.placeholder })),
         formActions: [...document.forms].map(f => { const u = new URL(f.action); return u.origin + u.pathname; }),
-        hasGoogleButton: /(?:Continue|Sign in|Sign up) with Google/i.test(document.body?.innerText || ''),
+        hasGoogleButton: [...document.querySelectorAll('button,a')].some(n => /^(?:Continue|Sign in|Sign up) with Google$/i.test(n.textContent.trim())),
         hasCaptcha: /captcha|arkose|verify your account|verify you are human/i.test(document.body?.innerText || ''),
         scripts: [...document.scripts].filter(s => s.src).map(s => { const u = new URL(s.src); return u.origin + u.pathname; }),
       }));
@@ -68,7 +68,7 @@ const pages = [
     record.frames = page.frames().map(f => safe(f.url()));
     fs.writeFileSync(path.join(output, name + '.json'), JSON.stringify(record, null, 2));
     const hosts = [...new Set(record.requests.map(r => { try { return new URL(r.url).hostname; } catch { return ''; } }))].filter(Boolean).sort();
-    const summary = JSON.stringify({ name, status: record.status, url: record.finalUrl, dom: record.dom && { title: record.dom.title, google: record.dom.hasGoogleButton, inputTypes: record.dom.inputTypes }, hosts, frames: record.frames, websockets: record.websockets, googleHandoff: record.googleHandoffUrl, error: record.observationError });
+    const summary = JSON.stringify({ name, status: record.status, url: record.finalUrl, dom: record.dom && { title: record.dom.title, google: record.dom.hasGoogleButton, inputTypes: record.dom.inputTypes }, hosts, challengeResources: record.requests.filter(r => /captcha|arkose/.test(r.url)), frames: record.frames, websockets: record.websockets, googleHandoff: record.googleHandoffUrl, error: record.observationError });
     console.log(summary);
     console.log('::notice title=Signed-out browser observation ' + name + '::' + summary.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'));
     await page.close();

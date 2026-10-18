@@ -8,6 +8,8 @@ import android.content.Context;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.view.InputDevice;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.MotionEvent;
 import android.view.WindowInsets;
 import android.view.inputmethod.EditorInfo;
@@ -32,11 +34,23 @@ import java.util.concurrent.atomic.AtomicReference;
 final class LivePageSupport {
     private LivePageSupport() { }
 
+    /** Use the actual in-app auth window if the site's handoff opened one. */
+    static WebView activeView(MainActivity activity) {
+        View auth = activity.findViewById(R.id.auth_window);
+        ViewGroup content = activity.findViewById(R.id.auth_window_content);
+        if (auth != null && auth.getVisibility() == View.VISIBLE && content != null) {
+            for (int i = 0; i < content.getChildCount(); i++) {
+                if (content.getChildAt(i) instanceof WebView) return (WebView) content.getChildAt(i);
+            }
+        }
+        return activity.findViewById(R.id.github_webview);
+    }
+
     static String evaluate(ActivityScenario<MainActivity> scenario, String script) throws Exception {
         AtomicReference<String> result = new AtomicReference<String>();
         CountDownLatch done = new CountDownLatch(1);
         scenario.onActivity(activity -> {
-            WebView view = activity.findViewById(R.id.github_webview);
+            WebView view = activeView(activity);
             assertNotNull(view);
             view.evaluateJavascript(script, value -> { result.set(value); done.countDown(); });
         });
@@ -69,23 +83,26 @@ final class LivePageSupport {
 
     static String url(ActivityScenario<MainActivity> scenario) {
         AtomicReference<String> url = new AtomicReference<String>();
-        scenario.onActivity(a -> url.set(((WebView) a.findViewById(R.id.github_webview)).getUrl()));
+        scenario.onActivity(a -> url.set(activeView(a).getUrl()));
         return url.get();
     }
 
     /** A real touch event, not element.value = text. Scroll only to make the target visible. */
     static void tap(ActivityScenario<MainActivity> scenario, String selector) throws Exception {
-        String quoted = JSONObject.quote(selector);
-        evaluate(scenario, "(function(){var e=document.querySelector(" + quoted
-                + ");if(e)e.scrollIntoView({block:'center'});return !!e;})()");
+        tapElement(scenario, "document.querySelector(" + JSONObject.quote(selector) + ")");
+    }
+
+    static void tapElement(ActivityScenario<MainActivity> scenario, String expression) throws Exception {
+        evaluate(scenario, "(function(){var e=" + expression
+                + ";if(e)e.scrollIntoView({block:'center'});return !!e;})()");
         Thread.sleep(350);
-        JSONObject rect = object(scenario, "(function(){var e=document.querySelector(" + quoted
-                + ");if(!e)return {};var r=e.getBoundingClientRect();return {x:r.left+r.width/2,"
+        JSONObject rect = object(scenario, "(function(){var e=" + expression
+                + ";if(!e)return {};var r=e.getBoundingClientRect();return {x:r.left+r.width/2,"
                 + "y:r.top+r.height/2,width:window.innerWidth};})()");
-        assertTrue("missing element " + selector, rect.has("x"));
+        assertTrue("missing tappable element", rect.has("x"));
         float[] xy = new float[2];
         scenario.onActivity(a -> {
-            WebView view = a.findViewById(R.id.github_webview);
+            WebView view = activeView(a);
             int[] origin = new int[2];
             view.getLocationOnScreen(origin);
             float scale = view.getWidth() / (float) rect.optDouble("width", 1);
@@ -105,7 +122,7 @@ final class LivePageSupport {
 
     static void showKeyboard(ActivityScenario<MainActivity> scenario) {
         scenario.onActivity(a -> {
-            WebView view = a.findViewById(R.id.github_webview);
+            WebView view = activeView(a);
             InputMethodManager ime = (InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE);
             ime.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
         });
@@ -114,7 +131,7 @@ final class LivePageSupport {
     /** Use Chromium's native IME path; no DOM value assignment or synthetic input event. */
     static void type(ActivityScenario<MainActivity> scenario, String text) {
         scenario.onActivity(a -> {
-            WebView view = a.findViewById(R.id.github_webview);
+            WebView view = activeView(a);
             InputConnection connection = view.onCreateInputConnection(new EditorInfo());
             assertNotNull("focused field must expose an IME connection", connection);
             assertTrue("native IME commitText", connection.commitText(text, 1));
@@ -124,7 +141,7 @@ final class LivePageSupport {
 
     static void replaceSelection(ActivityScenario<MainActivity> scenario, int start, int end, String text) {
         scenario.onActivity(a -> {
-            WebView view = a.findViewById(R.id.github_webview);
+            WebView view = activeView(a);
             InputConnection connection = view.onCreateInputConnection(new EditorInfo());
             assertNotNull(connection);
             assertTrue(connection.setSelection(start, end));
@@ -135,7 +152,7 @@ final class LivePageSupport {
 
     static int height(ActivityScenario<MainActivity> scenario) {
         int[] height = new int[1];
-        scenario.onActivity(a -> height[0] = a.findViewById(R.id.github_webview).getHeight());
+        scenario.onActivity(a -> height[0] = activeView(a).getHeight());
         return height[0];
     }
 
@@ -143,7 +160,7 @@ final class LivePageSupport {
         boolean[] visible = new boolean[1];
         scenario.onActivity(a -> {
             if (android.os.Build.VERSION.SDK_INT >= 30) {
-                WindowInsets insets = a.findViewById(R.id.github_webview).getRootWindowInsets();
+                WindowInsets insets = activeView(a).getRootWindowInsets();
                 visible[0] = insets != null && insets.isVisible(WindowInsets.Type.ime());
             }
         });
@@ -155,9 +172,13 @@ final class LivePageSupport {
         assertTrue(name.matches("[a-z0-9-]+"));
         // Test instrumentation shell privilege, NOT an app permission or file-saving capability.
         // This directory survives connectedAndroidTest uninstall so CI can pull the evidence.
-        String output = shell("mkdir -p /sdcard/Download/github-wrapper-evidence && screencap -p "
-                + "/sdcard/Download/github-wrapper-evidence/" + name + ".png && echo SCREENSHOT_OK");
-        assertTrue("screenshot capture: " + output, output.contains("SCREENSHOT_OK"));
+        String path = "/sdcard/Download/github-wrapper-evidence/" + name + ".png";
+        // UiAutomation executes argv, not a shell command line: &&/redirection are NOT interpreted.
+        shell("mkdir -p /sdcard/Download/github-wrapper-evidence");
+        shell("screencap -p " + path);
+        String size = shell("stat -c %s " + path).trim();
+        assertTrue("screenshot must exist with PNG bytes, size=" + size,
+                size.matches("[0-9]+") && Long.parseLong(size) > 1000);
     }
 
     static String shell(String command) throws Exception {

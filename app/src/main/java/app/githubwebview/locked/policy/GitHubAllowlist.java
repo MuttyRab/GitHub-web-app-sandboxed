@@ -257,10 +257,12 @@ public final class GitHubAllowlist {
                 "GitHub-specific Arkose challenge scripts, frames and verification endpoints."));
         entries.add(AllowEntry.resourceOnly("client-api.arkoselabs.com", paths("/fc/", "/v2/"),
                 "Arkose client challenge assets; no permission to browse the Arkose website."));
+        entries.add(AllowEntry.resourceOnly("static.captcha-delivery.com", Collections.<String>emptyList(),
+                "DataDome static challenge assets observed in the signed-out browser trace; never a page."));
         entries.add(AllowEntry.resourceOnly("geo.captcha-delivery.com", paths("/captcha/", "/interstitial/"),
                 "DataDome challenge frame observed on github.com/signup from this network; never a page."));
-        entries.add(AllowEntry.resourceOnly("ct.captcha-delivery.com", paths("/c.js"),
-                "DataDome script observed on github.com/signup. Prefix restriction, as in the original engine."));
+        entries.add(AllowEntry.resourceOnly("ct.captcha-delivery.com", paths("/c.js", "/i.js"),
+                "DataDome challenge/interstitial scripts observed on github.com/signup. Prefix restriction, as in the original engine."));
         return Collections.unmodifiableList(entries);
     }
 

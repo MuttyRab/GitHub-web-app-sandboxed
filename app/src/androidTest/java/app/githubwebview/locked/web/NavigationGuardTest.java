@@ -101,9 +101,9 @@ public class NavigationGuardTest {
         assertFalse("a Google identity frame must be allowed to render",
                 client.shouldOverrideUrlLoading(webView, FakeWebResourceRequest.subframe(
                         "https://www.gstatic.com/accounts/gsi/iframe.html")));
-        assertFalse("the Turnstile challenge frame must be allowed to render",
+        assertFalse("the Arkose challenge frame must be allowed to render",
                 client.shouldOverrideUrlLoading(webView, FakeWebResourceRequest.subframe(
-                        "https://github-api.arkoselabs.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/x")));
+                        "https://github-api.arkoselabs.com/fc/gc/game/index.html")));
     }
 
     /**
@@ -116,7 +116,7 @@ public class NavigationGuardTest {
         assertTrue(client.shouldOverrideUrlLoading(webView, FakeWebResourceRequest.navigation(
                 "https://www.google.com/recaptcha/enterprise/anchor?ar=1&k=6LeTGMcsAAAAA")));
         assertTrue(client.shouldOverrideUrlLoading(webView, FakeWebResourceRequest.navigation(
-                "https://github-api.arkoselabs.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/x")));
+                "https://github-api.arkoselabs.com/fc/gc/game/index.html")));
         assertTrue(client.shouldOverrideUrlLoading(webView, FakeWebResourceRequest.navigation(
                 "https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.x/y")));
         assertEquals(3, host.metrics().count(PolicyMetrics.Counter.BLOCKED_NAVIGATIONS));

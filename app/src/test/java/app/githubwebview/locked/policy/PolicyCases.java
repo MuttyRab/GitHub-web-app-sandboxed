@@ -448,6 +448,8 @@ public final class PolicyCases {
                 "https://geo.captcha-delivery.com/captcha/?initialCid=test",
                 "https://geo.captcha-delivery.com/interstitial/",
                 "https://ct.captcha-delivery.com/c.js",
+                "https://ct.captcha-delivery.com/i.js",
+                "https://static.captcha-delivery.com/captcha/assets/challenge.css",
                 "https://images.ctfassets.net/8aevphvgewt8/image.png",
                 "https://videos.ctfassets.net/8aevphvgewt8/video.mp4"}) {
             sub(cases, "required challenge/media resource " + resource, resource, true, null);

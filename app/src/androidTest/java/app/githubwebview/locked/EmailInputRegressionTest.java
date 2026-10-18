@@ -31,8 +31,8 @@ public class EmailInputRegressionTest {
     private static final String TAG = "GitHubWebViewLocked";
     private static final String ADDRESS = "probe@example.invalid";
     private static final String EDITED = "edited@example.invalid";
-    private static final String GOOGLE = "https://accounts.google.com/signin/v2/identifier"
-            + "?flowName=GlifWebSignIn&flowEntry=ServiceLogin&hl=en";
+    private static final String GOOGLE_BUTTON = "[...document.querySelectorAll('button,a')]"
+            + ".find(function(e){return /^(?:Continue|Sign in|Sign up) with Google$/i.test(e.textContent.trim())})";
 
     @Test
     public void githubEmailEntryEditingKeyboardResizeAndClientValidation() throws Exception {
@@ -73,7 +73,16 @@ public class EmailInputRegressionTest {
     public void googleIdentifierInputAndValidationOnlyWhenProviderServesTheForm() throws Exception {
         long since = System.currentTimeMillis();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-            LivePageSupport.load(scenario, GOOGLE);
+            // Use the site's real handoff, with its real state/CSRF/callback. Never fabricate OAuth
+            // URLs or fall back to a different sign-in flow to get past a provider rejection.
+            LivePageSupport.load(scenario, "https://github.com/login");
+            assertTrue("GitHub login should load before its Google handoff",
+                    LivePageSupport.waitFor(scenario,
+                            "location.hostname==='github.com' && !!document.querySelector('#login_field')", 45_000));
+            boolean offered = LivePageSupport.waitFor(scenario, "!!(" + GOOGLE_BUTTON + ")", 10_000);
+            Log.i(TAG, "input probe GitHub Google handoff offered=" + offered);
+            assumeTrue("GitHub did not offer Google sign-in in this WebView; not tested", offered);
+            LivePageSupport.tapElement(scenario, GOOGLE_BUTTON);
             boolean document = LivePageSupport.waitFor(scenario,
                     "location.hostname==='accounts.google.com' && document.readyState==='complete'"
                             + " && !!document.body && document.body.innerText.length>20", 45_000);
@@ -123,7 +132,7 @@ public class EmailInputRegressionTest {
     private static void exerciseNativeInput(ActivityScenario<MainActivity> scenario, String selector,
                                              String name) throws Exception {
         scenario.onActivity(a -> {
-            WebView w = a.findViewById(R.id.github_webview);
+            WebView w = LivePageSupport.activeView(a);
             ((InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE))
                     .hideSoftInputFromWindow(w.getWindowToken(), 0);
         });
@@ -153,6 +162,7 @@ public class EmailInputRegressionTest {
     }
 
     private static void assertClearPrompt(ActivityScenario<MainActivity> scenario, String selector) throws Exception {
+        Thread.sleep(450); // allow the real site floating-label transition to settle
         String script = """
                 (function(){
                   var e=document.querySelector(SELECTOR), r=e.getBoundingClientRect(), s=getComputedStyle(e);
@@ -164,9 +174,17 @@ public class EmailInputRegressionTest {
                   var candidates=[...document.querySelectorAll('label,span,div')].filter(function(n){
                     return n.children.length===0 && /^(enter your email|email or phone|email address|username or email address)$/i.test(n.textContent.trim());
                   });
+                  function visible(n){
+                    var opacity=1;
+                    for(var p=n;p && p.nodeType===1;p=p.parentElement){
+                      var st=getComputedStyle(p);opacity*=parseFloat(st.opacity);
+                      if(st.display==='none'||st.visibility==='hidden'||opacity<0.05)return false;
+                    }
+                    return true;
+                  }
                   candidates.forEach(function(n){
-                    var b=n.getBoundingClientRect(), st=getComputedStyle(n);
-                    if(st.display!=='none' && st.visibility!=='hidden' && parseFloat(st.opacity)>0.05
+                    var b=n.getBoundingClientRect();
+                    if(visible(n)
                       && b.width>0 && b.height>0 && b.right>left+2 && b.left<right-2
                       && b.bottom>top+2 && b.top<bottom-2) overlaps.push(n.textContent.trim());
                   });
