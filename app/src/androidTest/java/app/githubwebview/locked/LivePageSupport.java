@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.app.Instrumentation;
 import android.content.Context;
+import android.graphics.Rect;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.view.InputDevice;
@@ -97,8 +98,9 @@ final class LivePageSupport {
                 + ";if(e)e.scrollIntoView({block:'center'});return !!e;})()");
         Thread.sleep(350);
         JSONObject rect = object(scenario, "(function(){var e=" + expression
-                + ";if(!e)return {};var r=e.getBoundingClientRect();return {x:r.left+r.width/2,"
-                + "y:r.top+r.height/2,width:window.innerWidth};})()");
+                + ";if(!e)return {};var r=e.getBoundingClientRect(),v=window.visualViewport;"
+                + "return {x:r.left+r.width/2-(v?v.offsetLeft:0),"
+                + "y:r.top+r.height/2-(v?v.offsetTop:0),width:v?v.width:window.innerWidth};})()");
         assertTrue("missing tappable element", rect.has("x"));
         float[] xy = new float[2];
         scenario.onActivity(a -> {
@@ -108,6 +110,11 @@ final class LivePageSupport {
             float scale = view.getWidth() / (float) rect.optDouble("width", 1);
             xy[0] = origin[0] + (float) rect.optDouble("x") * scale;
             xy[1] = origin[1] + (float) rect.optDouble("y") * scale;
+            Rect visible = new Rect();
+            assertTrue("active WebView must be visible", view.getGlobalVisibleRect(visible));
+            assertTrue("native tap must land inside the WebView, not the keyboard/system UI: "
+                    + rect + " screen=" + xy[0] + "," + xy[1] + " bounds=" + visible,
+                    visible.contains(Math.round(xy[0]), Math.round(xy[1])));
         });
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         long now = SystemClock.uptimeMillis();
@@ -115,8 +122,13 @@ final class LivePageSupport {
         MotionEvent up = MotionEvent.obtain(now, now + 80, MotionEvent.ACTION_UP, xy[0], xy[1], 0);
         down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
         up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        try { instrumentation.sendPointerSync(down); instrumentation.sendPointerSync(up); }
-        finally { down.recycle(); up.recycle(); }
+        try {
+            // Use UiAutomation's real input dispatcher, as UIAutomator does. sendPointerSync is
+            // self-UID-targeted and can reject the UP event when focusing the field opens the IME
+            // between DOWN and UP. This test-only privilege does not change app permissions.
+            assertTrue("touch DOWN dispatched", instrumentation.getUiAutomation().injectInputEvent(down, true));
+            assertTrue("touch UP dispatched", instrumentation.getUiAutomation().injectInputEvent(up, true));
+        } finally { down.recycle(); up.recycle(); }
         instrumentation.waitForIdleSync();
     }
 

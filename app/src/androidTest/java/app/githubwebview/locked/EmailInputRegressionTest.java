@@ -31,8 +31,10 @@ public class EmailInputRegressionTest {
     private static final String TAG = "GitHubWebViewLocked";
     private static final String ADDRESS = "probe@example.invalid";
     private static final String EDITED = "edited@example.invalid";
-    private static final String GOOGLE_BUTTON = "[...document.querySelectorAll('button,a')]"
-            + ".find(function(e){return /^(?:Continue|Sign in|Sign up) with Google$/i.test(e.textContent.trim())})";
+    private static final String GOOGLE_BUTTON = "[...document.querySelectorAll('button,a,input[type=submit]')]"
+            + ".find(function(e){var text=(e.getAttribute('aria-label')||e.innerText||e.value||e.textContent||'')"
+            + ".replace(/\\s+/g,' ').trim();return /^(?:Continue|Sign in|Sign up) with Google(?:$|[, .])/i.test(text)"
+            + " && e.getClientRects().length>0 && getComputedStyle(e).visibility!=='hidden'})";
 
     @Test
     public void githubEmailEntryEditingKeyboardResizeAndClientValidation() throws Exception {
@@ -81,6 +83,16 @@ public class EmailInputRegressionTest {
                             "location.hostname==='github.com' && !!document.querySelector('#login_field')", 45_000));
             boolean offered = LivePageSupport.waitFor(scenario, "!!(" + GOOGLE_BUTTON + ")", 10_000);
             Log.i(TAG, "input probe GitHub Google handoff offered=" + offered);
+            if (!offered) {
+                Log.i(TAG, "input probe Google control evidence=" + LivePageSupport.object(scenario, """
+                        (function(){return {ua:navigator.userAgent,
+                          controls:[...document.querySelectorAll('button,a,input[type=submit]')].map(function(e){
+                            return {text:(e.getAttribute('aria-label')||e.innerText||e.value||e.textContent||'').trim(),
+                              visible:e.getClientRects().length>0 && getComputedStyle(e).visibility!=='hidden'};
+                          }).filter(function(c){return /google/i.test(c.text)})};})()
+                        """));
+                LivePageSupport.screenshot("github-google-option-unavailable");
+            }
             assumeTrue("GitHub did not offer Google sign-in in this WebView; not tested", offered);
             LivePageSupport.tapElement(scenario, GOOGLE_BUTTON);
             boolean document = LivePageSupport.waitFor(scenario,
