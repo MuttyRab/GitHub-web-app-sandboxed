@@ -139,7 +139,11 @@ final class LivePageSupport {
             view.requestFocusFromTouch();
             InputMethodManager ime = (InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (!ime.isActive(view)) ime.restartInput(view);
-            boolean accepted = ime.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+            // This follows a real user tap, so use an explicit normal request (flags=0), NOT
+            // SHOW_IMPLICIT: on the emulator's hardware-keyboard configuration a trailing implicit
+            // request can supersede/suppress Chromium's pending explicit touch request. Never use
+            // SHOW_FORCED, never change the app's own input settings.
+            boolean accepted = ime.showSoftInput(view, 0);
             android.util.Log.i("GitHubWebViewLocked", "input probe IME request: windowFocus="
                     + view.hasWindowFocus() + " viewFocus=" + view.hasFocus()
                     + " served=" + ime.isActive(view) + " accepted=" + accepted);

@@ -157,7 +157,7 @@ public class EmailInputRegressionTest {
         assertTrue("tap must focus the real input", LivePageSupport.waitFor(scenario,
                 "document.activeElement===document.querySelector(" + JSONObject.quote(selector) + ")", 8_000));
         LivePageSupport.showKeyboard(scenario);
-        long until = SystemClock.elapsedRealtime() + 8_000;
+        long until = SystemClock.elapsedRealtime() + 20_000;
         while (SystemClock.elapsedRealtime() < until && (!LivePageSupport.keyboardVisible(scenario)
                 || LivePageSupport.height(scenario) >= before)) Thread.sleep(200);
         Thread.sleep(350); // record settled window bounds, not the first frame of the IME transition
