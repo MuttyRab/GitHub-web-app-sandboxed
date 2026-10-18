@@ -68,7 +68,9 @@ const pages = [
     record.frames = page.frames().map(f => safe(f.url()));
     fs.writeFileSync(path.join(output, name + '.json'), JSON.stringify(record, null, 2));
     const hosts = [...new Set(record.requests.map(r => { try { return new URL(r.url).hostname; } catch { return ''; } }))].filter(Boolean).sort();
-    console.log(JSON.stringify({ name, status: record.status, url: record.finalUrl, dom: record.dom && { title: record.dom.title, google: record.dom.hasGoogleButton, inputTypes: record.dom.inputTypes }, hosts, frames: record.frames, websockets: record.websockets, googleHandoff: record.googleHandoffUrl, error: record.observationError }));
+    const summary = JSON.stringify({ name, status: record.status, url: record.finalUrl, dom: record.dom && { title: record.dom.title, google: record.dom.hasGoogleButton, inputTypes: record.dom.inputTypes }, hosts, frames: record.frames, websockets: record.websockets, googleHandoff: record.googleHandoffUrl, error: record.observationError });
+    console.log(summary);
+    console.log('::notice title=Signed-out browser observation ' + name + '::' + summary.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A'));
     await page.close();
   }
   await browser.close();

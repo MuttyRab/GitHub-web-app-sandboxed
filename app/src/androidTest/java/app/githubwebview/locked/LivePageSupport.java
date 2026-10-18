@@ -1,0 +1,174 @@
+package app.githubwebview.locked;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import android.app.Instrumentation;
+import android.content.Context;
+import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
+import android.view.InputDevice;
+import android.view.MotionEvent;
+import android.view.WindowInsets;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputMethodManager;
+import android.webkit.WebView;
+
+import androidx.test.core.app.ActivityScenario;
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+/** Test-only helpers. Nothing in this class is packaged into the installed app. */
+final class LivePageSupport {
+    private LivePageSupport() { }
+
+    static String evaluate(ActivityScenario<MainActivity> scenario, String script) throws Exception {
+        AtomicReference<String> result = new AtomicReference<String>();
+        CountDownLatch done = new CountDownLatch(1);
+        scenario.onActivity(activity -> {
+            WebView view = activity.findViewById(R.id.github_webview);
+            assertNotNull(view);
+            view.evaluateJavascript(script, value -> { result.set(value); done.countDown(); });
+        });
+        assertTrue("WebView evaluation timed out", done.await(15, TimeUnit.SECONDS));
+        assertNotNull("WebView returned no result", result.get());
+        return result.get();
+    }
+
+    static String string(ActivityScenario<MainActivity> scenario, String script) throws Exception {
+        return String.valueOf(new JSONTokener(evaluate(scenario, script)).nextValue());
+    }
+
+    static JSONObject object(ActivityScenario<MainActivity> scenario, String script) throws Exception {
+        return new JSONObject(evaluate(scenario, script));
+    }
+
+    static boolean waitFor(ActivityScenario<MainActivity> scenario, String condition, long timeoutMs)
+            throws Exception {
+        long end = SystemClock.elapsedRealtime() + timeoutMs;
+        do {
+            if ("true".equals(evaluate(scenario, condition))) return true;
+            Thread.sleep(300);
+        } while (SystemClock.elapsedRealtime() < end);
+        return false;
+    }
+
+    static void load(ActivityScenario<MainActivity> scenario, String url) {
+        scenario.onActivity(a -> a.loadVerifiedDestination(url, "test:live-probe"));
+    }
+
+    static String url(ActivityScenario<MainActivity> scenario) {
+        AtomicReference<String> url = new AtomicReference<String>();
+        scenario.onActivity(a -> url.set(((WebView) a.findViewById(R.id.github_webview)).getUrl()));
+        return url.get();
+    }
+
+    /** A real touch event, not element.value = text. Scroll only to make the target visible. */
+    static void tap(ActivityScenario<MainActivity> scenario, String selector) throws Exception {
+        String quoted = JSONObject.quote(selector);
+        evaluate(scenario, "(function(){var e=document.querySelector(" + quoted
+                + ");if(e)e.scrollIntoView({block:'center'});return !!e;})()");
+        Thread.sleep(350);
+        JSONObject rect = object(scenario, "(function(){var e=document.querySelector(" + quoted
+                + ");if(!e)return {};var r=e.getBoundingClientRect();return {x:r.left+r.width/2,"
+                + "y:r.top+r.height/2,width:window.innerWidth};})()");
+        assertTrue("missing element " + selector, rect.has("x"));
+        float[] xy = new float[2];
+        scenario.onActivity(a -> {
+            WebView view = a.findViewById(R.id.github_webview);
+            int[] origin = new int[2];
+            view.getLocationOnScreen(origin);
+            float scale = view.getWidth() / (float) rect.optDouble("width", 1);
+            xy[0] = origin[0] + (float) rect.optDouble("x") * scale;
+            xy[1] = origin[1] + (float) rect.optDouble("y") * scale;
+        });
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        long now = SystemClock.uptimeMillis();
+        MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, xy[0], xy[1], 0);
+        MotionEvent up = MotionEvent.obtain(now, now + 80, MotionEvent.ACTION_UP, xy[0], xy[1], 0);
+        down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        try { instrumentation.sendPointerSync(down); instrumentation.sendPointerSync(up); }
+        finally { down.recycle(); up.recycle(); }
+        instrumentation.waitForIdleSync();
+    }
+
+    static void showKeyboard(ActivityScenario<MainActivity> scenario) {
+        scenario.onActivity(a -> {
+            WebView view = a.findViewById(R.id.github_webview);
+            InputMethodManager ime = (InputMethodManager) a.getSystemService(Context.INPUT_METHOD_SERVICE);
+            ime.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
+        });
+    }
+
+    /** Use Chromium's native IME path; no DOM value assignment or synthetic input event. */
+    static void type(ActivityScenario<MainActivity> scenario, String text) {
+        scenario.onActivity(a -> {
+            WebView view = a.findViewById(R.id.github_webview);
+            InputConnection connection = view.onCreateInputConnection(new EditorInfo());
+            assertNotNull("focused field must expose an IME connection", connection);
+            assertTrue("native IME commitText", connection.commitText(text, 1));
+            connection.finishComposingText();
+        });
+    }
+
+    static void replaceSelection(ActivityScenario<MainActivity> scenario, int start, int end, String text) {
+        scenario.onActivity(a -> {
+            WebView view = a.findViewById(R.id.github_webview);
+            InputConnection connection = view.onCreateInputConnection(new EditorInfo());
+            assertNotNull(connection);
+            assertTrue(connection.setSelection(start, end));
+            assertTrue(connection.commitText(text, 1));
+            connection.finishComposingText();
+        });
+    }
+
+    static int height(ActivityScenario<MainActivity> scenario) {
+        int[] height = new int[1];
+        scenario.onActivity(a -> height[0] = a.findViewById(R.id.github_webview).getHeight());
+        return height[0];
+    }
+
+    static boolean keyboardVisible(ActivityScenario<MainActivity> scenario) {
+        boolean[] visible = new boolean[1];
+        scenario.onActivity(a -> {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                WindowInsets insets = a.findViewById(R.id.github_webview).getRootWindowInsets();
+                visible[0] = insets != null && insets.isVisible(WindowInsets.Type.ime());
+            }
+        });
+        return visible[0];
+    }
+
+    /** Only signed-out pages and the reserved example.invalid test address are captured. */
+    static void screenshot(String name) throws Exception {
+        assertTrue(name.matches("[a-z0-9-]+"));
+        // Test instrumentation shell privilege, NOT an app permission or file-saving capability.
+        // This directory survives connectedAndroidTest uninstall so CI can pull the evidence.
+        String output = shell("mkdir -p /sdcard/Download/github-wrapper-evidence && screencap -p "
+                + "/sdcard/Download/github-wrapper-evidence/" + name + ".png && echo SCREENSHOT_OK");
+        assertTrue("screenshot capture: " + output, output.contains("SCREENSHOT_OK"));
+    }
+
+    static String shell(String command) throws Exception {
+        ParcelFileDescriptor fd = InstrumentationRegistry.getInstrumentation().getUiAutomation()
+                .executeShellCommand(command);
+        try (InputStream in = new ParcelFileDescriptor.AutoCloseInputStream(fd);
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+            return out.toString(StandardCharsets.UTF_8.name());
+        }
+    }
+}

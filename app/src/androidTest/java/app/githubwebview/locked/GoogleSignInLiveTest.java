@@ -2,6 +2,7 @@ package app.githubwebview.locked;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import android.util.Log;
 import android.webkit.WebView;
@@ -36,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * </ul>
  *
  * <p>Offline-tolerant: on an emulator with no route to Google there is nothing to load, which is not a
- * policy failure, so the test records that and returns.</p>
+ * policy failure, so the test records that and marks coverage as skipped.</p>
  */
 @RunWith(AndroidJUnit4.class)
 public class GoogleSignInLiveTest {
@@ -48,6 +49,7 @@ public class GoogleSignInLiveTest {
 
     @Test
     public void googleSignInPageIsReachableAndNothingItNeedsIsRefused() throws Exception {
+        long since = System.currentTimeMillis();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> activity.loadVerifiedDestination(SIGN_IN_URL, "test:google-signin"));
             String url = waitForLoad(scenario);
@@ -56,7 +58,7 @@ public class GoogleSignInLiveTest {
             if (url == null || url.isEmpty()) {
                 Log.w(TAG, "google sign-in probe: nothing loaded within " + LOAD_TIMEOUT_MS
                         + "ms (offline emulator?) - no policy failure to report");
-                return;
+                assumeTrue("Google page unavailable: no authentication verification", false);
             }
 
             assertTrue("the app must only ever be on an approved host, was: " + url,
@@ -86,7 +88,7 @@ public class GoogleSignInLiveTest {
             // refused by the allow-list, so the page rendered its static markup and never became
             // interactive. A page the app allows to load must not have its own assets refused - if the
             // allow-list is ever too narrow again, this fails in CI instead of in someone's hands.
-            List<String> refused = refusedAllowListedHosts();
+            List<String> refused = refusedAllowListedHosts(since);
             assertTrue("hosts the app allows must never be refused while serving the sign-in page: "
                     + refused, refused.isEmpty());
         }
@@ -101,9 +103,10 @@ public class GoogleSignInLiveTest {
      * half-loaded page whose controls do nothing, which is exactly the failure this test was written
      * after. First-party hosts cannot be refused at all, so they are not in scope here.</p>
      */
-    private static List<String> refusedAllowListedHosts() {
+    private static List<String> refusedAllowListedHosts(long since) {
         List<String> refused = new ArrayList<String>();
         for (PolicyMetrics.BlockEvent event : PolicyMetrics.get().recentBlocks()) {
+            if (event.timestampMs() < since) continue;
             String host = event.host();
             if (host.isEmpty()) {
                 continue;
@@ -120,17 +123,19 @@ public class GoogleSignInLiveTest {
 
     /**
      * Reports which CAPTCHA the real site references, so the allow-list can be checked against reality
-     * rather than against an assumption. Logged, not asserted: the widget only appears when Cloudflare
+     * rather than against an assumption. Logged, not asserted: the widget only appears when the website/provider
      * decides to challenge, which a test cannot force.
      */
     @Test
     public void reportWhichCaptchaTheSiteReferences() throws Exception {
+        long since = System.currentTimeMillis();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(activity -> activity.loadVerifiedDestination("https://github.com/signup", "test:captcha-probe"));
             String url = waitForLoad(scenario);
             Log.i(TAG, "captcha probe: url=" + url);
             if (url == null || !url.startsWith("https://github.com/")) {
                 Log.w(TAG, "captcha probe: the site did not load (offline emulator?) - nothing to probe");
-                return;
+                assumeTrue("GitHub signup page unavailable: no CAPTCHA observation", false);
             }
             String probe = evaluate(scenario, """
                     (function () {
@@ -138,9 +143,8 @@ public class GoogleSignInLiveTest {
                       var nodes = document.querySelectorAll('script[src], iframe[src], link[href]');
                       for (var i = 0; i < nodes.length; i++) {
                         var s = String(nodes[i].getAttribute('src') || nodes[i].getAttribute('href') || '');
-                        if (s.indexOf('recaptcha') >= 0 || s.indexOf('turnstile') >= 0
-                                || s.indexOf('cloudflare') >= 0 || s.indexOf('challenges.') >= 0) {
-                          hits.push(s.substring(0, 120));
+                        if (/captcha|arkose|gstatic/.test(s)) {
+                          try {var u=new URL(s,location.href);hits.push(u.origin+u.pathname);}catch(e){}
                         }
                       }
                       if (window.grecaptcha) { hits.push('window.grecaptcha present'); }
@@ -155,7 +159,7 @@ public class GoogleSignInLiveTest {
             // Same rule for the widget hosts: whatever the real page asks for from an allow-listed CAPTCHA
             // host must be served. A widget whose frame or script is refused is a challenge that can never
             // be shown - and a form that can therefore never be submitted.
-            List<String> refused = refusedAllowListedHosts();
+            List<String> refused = refusedAllowListedHosts(since);
             assertTrue("hosts the app allows must never be refused while the site's CAPTCHAs load: "
                     + refused, refused.isEmpty());
         }
