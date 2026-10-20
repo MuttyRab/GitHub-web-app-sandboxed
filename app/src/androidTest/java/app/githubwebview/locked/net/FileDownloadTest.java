@@ -1,6 +1,7 @@
 package app.githubwebview.locked.net;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -23,6 +24,8 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -64,7 +67,6 @@ public class FileDownloadTest {
         final AtomicReference<String> refused = new AtomicReference<>();
         final AtomicReference<String> cancellation = new AtomicReference<>();
         final AtomicLong bytes = new AtomicLong(-1L);
-        volatile boolean started;
 
         @Override
         public void onDownloadRefused(String url, String host, String reason) {
@@ -74,7 +76,7 @@ public class FileDownloadTest {
 
         @Override
         public void onDownloadStarted(String fileName, long totalBytes) {
-            started = true;
+            // progress only
         }
 
         @Override
@@ -103,7 +105,7 @@ public class FileDownloadTest {
     }
 
     /** The guard is process-wide; wait until the activity has installed it. */
-    private static boolean awaitGuard(ActivityScenario<MainActivity> scenario) {
+    private static boolean awaitGuard() {
         long deadline = SystemClock.uptimeMillis() + GUARD_TIMEOUT_MS;
         while (SystemClock.uptimeMillis() < deadline) {
             if (EgressGuard.port() > 0) {
@@ -116,16 +118,19 @@ public class FileDownloadTest {
 
     @Test
     public void approvedFileIsSavedIntoTheDownloadsCollection() throws Exception {
-        Assume.assumeTrue("MediaStore Downloads needs Android 10+", Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q);
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-            Assume.assumeTrue("the egress guard never became ready on this device", awaitGuard(scenario));
+        Assume.assumeTrue("MediaStore Downloads needs Android 10+",
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q);
+        try (ActivityScenario<MainActivity> ignored = ActivityScenario.launch(MainActivity.class)) {
+            Assume.assumeTrue("the egress guard never became ready on this device", awaitGuard());
 
             WaitingListener listener = new WaitingListener();
             FileDownloads downloads = new FileDownloads(context(), GitHubAllowlist.productionConfig(),
                     PolicyMetrics.get(), new Handler(Looper.getMainLooper()), listener);
 
-            assertTrue("the download must be accepted", downloads.download(SOURCE_URL, null, "text/plain", -1L));
-            assertTrue("the transfer must finish", listener.done.await(DOWNLOAD_TIMEOUT_MS, TimeUnit.SECONDS));
+            assertTrue("the download must be accepted",
+                    downloads.download(SOURCE_URL, null, "text/plain", -1L));
+            assertTrue("the transfer must finish",
+                    listener.done.await(DOWNLOAD_TIMEOUT_MS, TimeUnit.SECONDS));
 
             assertNull("nothing may be refused, but: " + listener.refused.get(), listener.refused.get());
             assertNull("nothing may fail, but: " + listener.failure.get(), listener.failure.get());
@@ -133,41 +138,73 @@ public class FileDownloadTest {
             assertNotNull(listener.savedLocation.get());
             assertTrue("bytes must have arrived", listener.bytes.get() > 0L);
 
-            Resume resume = findSaved(listener.savedName.get());
+            List<Resume> saved = findSaved(listener.savedName.get());
             try {
-                assertNotNull("the file must exist in the Downloads collection", resume);
-                assertTrue("the saved file must not be empty", resume.size > 0L);
+                assertFalse("no usable row in the Downloads collection; rows seen: " + seen, saved.isEmpty());
+                assertTrue("the saved file must not be empty: " + saved.get(0), saved.get(0).size > 0L);
             } finally {
-                if (resume != null) {
+                for (Resume resume : saved) {
                     context().getContentResolver().delete(resume.uri, null, null);
                 }
+                seen.clear();
             }
         }
     }
 
+    /** One row of the Downloads collection, as this test needs to see it. */
     private static final class Resume {
         final Uri uri;
         final long size;
+        final String name;
+        final int pending;
 
-        Resume(Uri uri, long size) {
+        Resume(Uri uri, long size, String name, int pending) {
             this.uri = uri;
             this.size = size;
+            this.name = name;
+            this.pending = pending;
+        }
+
+        @Override
+        public String toString() {
+            return name + " (size=" + size + ", pending=" + pending + ")";
         }
     }
 
-    /** Newest completed row with this display name, or null. */
-    private static Resume findSaved(String displayName) {
+    /** Every row the lookup saw, so a failure message says what MediaStore actually contains. */
+    private static final List<String> seen = new ArrayList<>();
+
+    /**
+     * Rows in the Downloads collection whose display name starts with this file's stem.
+     *
+     * <p>Matched by stem on purpose: MediaStore de-duplicates a repeated name, and the point of the test
+     * is that the file the app saved is really there - not that MediaStore chose the exact string the app
+     * asked for.</p>
+     */
+    private static List<Resume> findSaved(String displayName) {
         ContentResolver resolver = context().getContentResolver();
-        String[] projection = {MediaStore.Downloads._ID, MediaStore.Downloads.SIZE};
-        String selection = MediaStore.Downloads.DISPLAY_NAME + "=? AND " + MediaStore.Downloads.IS_PENDING + "=0";
+        String stem = displayName == null ? "README" : displayName.replaceAll("\\.[^.]+$", "");
+        String[] projection = {MediaStore.Downloads._ID, MediaStore.Downloads.SIZE,
+                MediaStore.Downloads.DISPLAY_NAME, MediaStore.Downloads.IS_PENDING};
+        String selection = MediaStore.Downloads.DISPLAY_NAME + " LIKE ?";
+        List<Resume> found = new ArrayList<>();
         try (Cursor cursor = resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection,
-                new String[]{displayName}, MediaStore.Downloads.DATE_ADDED + " DESC")) {
-            if (cursor == null || !cursor.moveToFirst()) {
-                return null;
+                new String[]{stem + "%"}, MediaStore.Downloads.DATE_ADDED + " DESC")) {
+            if (cursor == null) {
+                return found;
             }
-            long id = cursor.getLong(0);
-            long size = cursor.getLong(1);
-            return new Resume(Uri.withAppendedPath(MediaStore.Downloads.EXTERNAL_CONTENT_URI, String.valueOf(id)), size);
+            while (cursor.moveToNext()) {
+                long id = cursor.getLong(0);
+                long size = cursor.getLong(1);
+                String name = cursor.getString(2);
+                int pending = cursor.getInt(3);
+                seen.add(name + " (size=" + size + ", pending=" + pending + ")");
+                if (pending == 0) {
+                    found.add(new Resume(Uri.withAppendedPath(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, String.valueOf(id)), size, name, pending));
+                }
+            }
         }
+        return found;
     }
 }
