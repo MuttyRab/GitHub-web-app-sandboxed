@@ -58,10 +58,12 @@ and the exact signed release APK installed and launched. Native GitHub and gener
 entry/editing/resize/overlap checks passed. The actual GitHub → Google handoff was skipped because
 GitHub did not offer the button in this WebView; no completed authentication is claimed.
 
-[Run 39405364177](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39405364177)
-re-ran everything after the refusal-message change and passed all four jobs: source preservation, the
-JVM suite (including the new `refusalsAreReportedAsRefusalsNotAsOutages` invariant), the APK build and
-the emulator suite. That change touches only what the app says when it refuses something.
+[Run 39415422258](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39415422258)
+passed all four jobs after downloads were added: source preservation, **4,169 JVM cases (0 failed)**,
+the signed APK build, and the emulator suite (**61 passed, 0 failed, 2 skipped**). The emulator run
+includes a live save: `FileDownloadTest` downloads a real file through the loopback guard, asserts the
+`MediaStore` row and its size, then deletes it. Help and download refusals are still covered by
+`refusalsAreReportedAsRefusalsNotAsOutages`.
 
 See [TEST_REPORT.md](TEST_REPORT.md) for scope/earlier failures and [docs/EVIDENCE.md](docs/EVIDENCE.md)
 for actual results. The original Arena reports are archived under `docs/upstream-arena/`, not reused
