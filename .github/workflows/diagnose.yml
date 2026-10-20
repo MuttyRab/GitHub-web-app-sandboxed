@@ -60,7 +60,8 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Run the device tests and keep the output
+      - name: Run the device tests
+        id: device
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -70,27 +71,35 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
           script: |
-            adb shell settings put secure show_ime_with_hard_keyboard 1
-            ( ./gradlew --no-daemon --console=plain :app:connectedDebugAndroidTest; echo "gradle exit $?" ) \
-              > /tmp/device.log 2>&1
-            find app/build/outputs/androidTest-results -name '*.xml' > /tmp/xmls.txt || true
-            {
-              echo "### Emulator run"
-              echo '#### failing cases'
-              echo '```'
-              grep -h -B2 -A8 "<failure\|<error" $(cat /tmp/xmls.txt) | head -c 26000 || echo "none"
-              echo '```'
-              echo '#### suites'
-              echo '```'
-              grep -h "<testsuite " $(cat /tmp/xmls.txt) | head -30 || echo "no xml"
-              echo '```'
-              echo '#### gradle'
-              echo '```'
-              grep -E "FAILED|tests completed|gradle exit|Exception|BUILD " /tmp/device.log | head -40 || true
-              tail -c 9000 /tmp/device.log
-              echo '```'
-            } > /tmp/comment.md
-            gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-              -f body="$(head -c 60000 /tmp/comment.md)" --jq '.id' || true
+            ./gradlew --no-daemon --console=plain :app:connectedDebugAndroidTest > /tmp/device.log 2>&1
+            echo "gradle exit: $?" >> /tmp/device.log
+      - name: Report device results
+        if: always()
+        run: |
+          set +e
+          {
+            echo "### Emulator run"
+            echo "device step: ${{ steps.device.outcome }}"
+            echo '#### failing cases'
+            echo '```'
+            for f in $(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null); do
+              grep -h -A10 '<failure\|<error' "$f"
+            done | head -c 26000
+            echo '```'
+            echo '#### suites'
+            echo '```'
+            for f in $(find app/build/outputs/androidTest-results -name '*.xml' 2>/dev/null); do
+              grep -h '<testsuite ' "$f"
+            done | head -30
+            echo '```'
+            echo '#### gradle'
+            echo '```'
+            grep -E 'FAILED|tests completed|gradle exit|Exception|BUILD ' /tmp/device.log | head -50
+            tail -c 9000 /tmp/device.log
+            echo '```'
+          } > /tmp/comment.md
+          head -c 60000 /tmp/comment.md
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+            -f body="$(head -c 60000 /tmp/comment.md)" --jq '.id'
         env:
           GH_TOKEN: ${{ github.token }}
