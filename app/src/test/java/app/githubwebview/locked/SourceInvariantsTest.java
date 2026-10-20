@@ -244,13 +244,62 @@ public class SourceInvariantsTest {
         assertTrue("popups must be intercepted", chrome.contains("onCreateWindow"));
     }
 
+    /**
+     * Downloads are saved by the app itself, and the guarantees that made them safe to refuse before are
+     * the same ones that make them safe to perform now:
+     *
+     * <ul>
+     *   <li>no platform download manager, no other app, no share sheet, no browser - nothing is handed
+     *       on;</li>
+     *   <li>no storage permission is declared: Android 10+ writes through {@code MediaStore} and older
+     *       versions into the app's own folder, both of which need none;</li>
+     *   <li>every byte comes through the same loopback egress guard as the WebView. There is no direct
+     *       {@code openConnection()} anywhere, so a missing guard means no download, never an unguarded
+     *       one;</li>
+     *   <li>redirects are followed by hand and re-planned one hop at a time, so no hop escapes the
+     *       policy;</li>
+     *   <li>the transfer is bounded in hops and size, and a failure or cancel deletes its partial
+     *       file.</li>
+     * </ul>
+     */
     @Test
-    public void downloadsAreRefused() throws Exception {
+    public void downloadsAreSavedByTheAppAndNeverHandedOn() throws Exception {
+        String sources = allMainSources();
         String hardening = code("app/githubwebview/locked/web/WebViewHardening.java");
-        assertTrue(hardening.contains("setDownloadListener"));
-        assertFalse("the app must not use the platform download manager",
-                allMainSources().contains("DownloadManager"));
-        assertFalse("nothing may be shared with another app", allMainSources().contains("ACTION_SEND"));
+        String fetcher = code("app/githubwebview/locked/net/FileDownloads.java");
+        String plan = code("app/githubwebview/locked/net/DownloadPlan.java");
+        String main = code("app/githubwebview/locked/MainActivity.java");
+        String manifest = TestPaths.read(TestPaths.manifest());
+
+        assertTrue("the WebView must route downloads to the app's downloader",
+                hardening.contains("setDownloadListener"));
+        assertTrue(hardening.contains("downloads.download("));
+        assertTrue("the one downloader must be created by the activity", main.contains("new FileDownloads("));
+
+        assertFalse("the app must not use the platform download manager", sources.contains("DownloadManager"));
+        assertFalse("nothing may be shared with another app", sources.contains("ACTION_SEND"));
+        assertFalse("no storage permission may ever be declared",
+                manifest.contains("WRITE_EXTERNAL_STORAGE")
+                        || manifest.contains("READ_EXTERNAL_STORAGE")
+                        || manifest.contains("MANAGE_EXTERNAL_STORAGE"));
+        assertFalse("the shared, permission-gated public folder must not be used",
+                sources.contains("getExternalStoragePublicDirectory"));
+
+        assertTrue("every hop goes through the loopback guard", fetcher.contains("EgressGuard.port()"));
+        assertTrue(fetcher.contains("new Proxy(Proxy.Type.HTTP, new InetSocketAddress(EgressProxy.LOOPBACK_HOST, port))"));
+        assertFalse("there must be no direct connection branch", fetcher.contains("openConnection()"));
+        assertTrue("redirects are followed by hand, not by the HTTP client",
+                fetcher.contains("setInstanceFollowRedirects(false)"));
+        assertTrue("every hop is re-planned against the policy", fetcher.contains("DownloadPlan.plan("));
+        assertTrue("the redirect budget must be enforced", fetcher.contains("DownloadPlan.MAX_REDIRECTS"));
+        assertTrue("the transfer must be size-bounded", fetcher.contains("DownloadPlan.tooLarge("));
+
+        assertTrue("Android 10+ saves through MediaStore, with no permission",
+                fetcher.contains("MediaStore.Downloads.EXTERNAL_CONTENT_URI"));
+        assertTrue("a partial file must never be left behind",
+                fetcher.contains("destination.abort()"));
+        assertTrue("only https URLs on allow-listed hosts may be downloaded",
+                plan.contains("policy.evaluateRequest(candidate)"));
     }
 
     /**

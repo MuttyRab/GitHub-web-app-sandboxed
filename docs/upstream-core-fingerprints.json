@@ -52,13 +52,16 @@
       "upstreamFileSha256": "32a625997c40054079b95a4d4533656d0edaecbe52d62e90570a18f08fbd2921",
       "adaptedCodeSha256": "f54811715ebe52aafae1b026872bc7a05fd2aa2ea8e10ebc67adffed2f8e350f",
       "reviewedException": {
-        "summary": "Refused destinations are reported as refusals, with the host and policy reason; a refused download is shown on the overlay, not only a transient toast.",
-        "rationale": "Users reported the app as broken: a redirect to docs.github.com surfaced as 'github.com could not be reached', and a blocked download looked like a dead button. Feedback only - the policy verdicts, the allow-list, the download listener and the single loadUrl path are untouched.",
-        "adaptedCodeSha256": "ffebb6dfc6db987d03ae38401646067b42857a86c1b8660e8d1f5f1bf0c909fa",
+        "summary": "Downloads are saved by the app (progress dialog, saved/failed/cancelled/refused reporting) and a refused destination is reported as a refusal with its host and policy reason.",
+        "rationale": "Two user reports in one change: Help/Docs links surfaced as 'github.com could not be reached', and downloads did nothing. The refusal wording is now accurate, and the activity owns the one FileDownloads instance whose callbacks drive the native surfaces. No allow-list entry, verdict, permission or loadUrl path changes.",
+        "adaptedCodeSha256": "addd6d47397028e0d7b737d71ad2e985a554c3e506b17dba39dd7dd90641594a",
         "requiredTokens": [
           "verdict",
-          "\"downloads are disabled in this app, so nothing was saved\"",
-          "\"Downloads are disabled in this app: nothing was saved\""
+          "FileDownloads",
+          "onDownloadSaved",
+          "downloadProgressBar",
+          "\"Download refused: nothing was saved\"",
+          "\"Download cancelled: nothing was saved\""
         ],
         "forbiddenTokens": [
           "\"Downloads are disabled in this app\""
@@ -158,7 +161,29 @@
     "app/src/main/java/app/githubwebview/locked/web/WebViewHardening.java": {
       "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/WebViewHardening.java",
       "upstreamFileSha256": "b9c73a70a640c10ef6e38cade5df855f62ad9dac0e28682d99d511062c13c2b0",
-      "adaptedCodeSha256": "3517bbd4abfcc00e847cf61fdcd11de15fc347f78480d1fcfa061a3c1b6947d3"
+      "adaptedCodeSha256": "3517bbd4abfcc00e847cf61fdcd11de15fc347f78480d1fcfa061a3c1b6947d3",
+      "reviewedException": {
+        "summary": "The download listener forwards to the app's downloader instead of refusing outright.",
+        "rationale": "The user asked for downloads to work. The listener still never hands a URL to the platform download manager, a browser or another app: it forwards to FileDownloads, which enforces the same policy and the same loopback egress guard. Every other hardening switch is unchanged.",
+        "adaptedCodeSha256": "a258ddd7ae821af6e31e8054658f5585ac418617d1e199466353076029d53aa5",
+        "requiredTokens": [
+          "GuardedDownloadListener",
+          "FileDownloads"
+        ],
+        "forbiddenTokens": [
+          "BlockingDownloadListener"
+        ]
+      }
+    }
+  },
+  "addedProductionFiles": {
+    "app/src/main/java/app/githubwebview/locked/net/DownloadPlan.java": {
+      "purpose": "Pure rules for a saved download: https-only, allow-listed host, redirect budget, 1 GiB ceiling, and hostile-input file naming. No Android dependency, exhaustively JVM-tested.",
+      "codeSha256": "64b45b058442322c8cd771c89e13e00e6e9f0a63973cd632628363f892040a93"
+    },
+    "app/src/main/java/app/githubwebview/locked/net/FileDownloads.java": {
+      "purpose": "Fetches a download through the loopback egress guard (no direct connection), re-validates every redirect hop, and saves through MediaStore (Android 10+) or the app's own folder (7-9). No storage permission, no platform download manager, no other app.",
+      "codeSha256": "074c7a3ffddd2a46ab0e8a2d8ca4ffd25bd9cabf2b425377b56353b7b2222358"
     }
   }
 }

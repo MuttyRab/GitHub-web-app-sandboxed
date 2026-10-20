@@ -262,3 +262,24 @@ Not verified here: no JDK/Android SDK exists in this diagnosis environment, so t
 jobs were not run locally. `python3 scripts/verify-preserved-core.py` passes, the resource XML parses,
 and the source assertions were replayed against the real files; CI re-runs the full JVM and device
 suites on push.
+
+
+---
+
+## 10. Follow-up: downloads implemented (2026-10-20)
+
+Option **C** was requested next, and is now implemented (see
+[CHANGES.md](CHANGES.md#post-import-review-downloads-2026-10-20) for the file list). Help remains
+refused (option B is still a decision for you), but a download now completes:
+
+| Step | Behaviour |
+|---|---|
+| `DownloadListener` | Forwards the URL to `FileDownloads` instead of refusing it outright. |
+| Policy | Same allow-list, same exact-host rule, judged with the **request** role: `raw.githubusercontent.com`, `codeload.github.com`, `objects.githubusercontent.com` and the release-asset hosts pass, everything else is refused with the policy's own reason. `blob:`/`data:` are refused (no JavaScript bridge exists). |
+| Transport | Each hop opens through the existing loopback CONNECT proxy (`EgressGuard.port()`), and each redirect is re-planned before it is opened (max 5). If the guard is not running, the download fails; there is no direct connection. |
+| Storage | Android 10+ → `MediaStore.Downloads` (pending until complete, deleted on failure). Android 7-9 → the app's own external Downloads folder. No storage permission, no platform download manager, no other app, `startActivity` still refuses everything. |
+| Limits | 1 GiB per file, sanitised file name, progress dialog with Cancel, partial file deleted on failure or cancel. |
+
+What did **not** change: the allow-list, `UrlPolicy`, `PolicyConfig`, the egress proxy, `startActivity`,
+the manifest's permissions, and the rule that an asset host can never become the visible page. A
+download is still not a navigation.

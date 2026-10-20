@@ -13,7 +13,9 @@ The install ID is `app.githubwebview.locked` (version 1.0.0 / code 1), separate 
 The original single Activity and WebView, dark native overlays, pull-to-refresh, back behavior,
 OAuth popup window, watchdog, renderer recovery, cookies, hardware rendering and `adjustResize`.
 The pure-Java URL parser and PRODUCT / ASSET / SIGN_IN roles, service-worker guard,
-CONNECT egress proxy with no direct fallback, TLS checks, and escape/download/file-picker refusals.
+CONNECT egress proxy with no direct fallback, TLS checks, escape/file-picker refusals, and the original
+refusal to hand anything to another app. Downloads are the one added capability: they are fetched and
+saved **by the app**, through that same proxy (see [Downloads](#downloads)).
 No dashboards, domain management, approval flows, extra settings, script injection or input CSS fixes.
 
 The start URL is `https://github.com/`. Only `github.com`, `www.github.com` and the approved
@@ -90,16 +92,37 @@ instead of looking like a fault:
   Clicking one shows the native "Blocked by this app" panel naming the host and the policy reason.
   By direct URL, only `github.com` and `www.github.com` are page hosts; every other listed host is a
   resource host for a github.com page and can never become the page.
-* **Downloads.** Every GitHub download redirects to a resource-only host
-  (`raw.githubusercontent.com` for a file, `codeload.github.com` for an archive,
-  `objects.githubusercontent.com` for a release asset), and the app additionally installs a
-  `DownloadListener` that refuses every transfer. Nothing is written to storage and no other app or
-  browser is launched. A refused download now raises the same native panel ("downloads are disabled in
-  this app, so nothing was saved") instead of only a short toast.
+* **Downloads from anywhere else.** See [Downloads](#downloads) for what is allowed; a link to an
+  unapproved host, a `blob:`/`data:` link, cleartext `http` or anything above the size limit raises the
+  same native panel, with the refused host and the policy reason, and nothing is written.
 
 A load error that the policy did not cause (no network, TLS, renderer) still reports as a load
 failure; one that *was* a refusal is reported as a refusal with the refused host. "Copy diagnostics"
 in that panel gives the exact `BlockReason`.
+
+## Downloads
+
+GitHub's download links point at resource hosts (`raw.githubusercontent.com` for a file,
+`codeload.github.com` for an archive, `objects.githubusercontent.com` for a release asset). Those hosts
+are on the allow-list as **resources**, so the app can save their bytes - and now does:
+
+* the WebView's `DownloadListener` forwards the URL to the app's own downloader; **no** platform
+  download manager, browser, share sheet or other app is ever involved, and no storage permission is
+  declared;
+* the bytes are fetched by the app **through the same loopback CONNECT proxy as the WebView**, so the
+  host must still be allow-listed and the port is still 443. There is no direct-connection branch: if
+  the guard is not running, the download fails instead of going around it;
+* every redirect hop is re-checked against the policy (at most 5), so a redirect into an unapproved
+  host is refused before it is opened;
+* Android 10+ saves into the system **Downloads** collection via `MediaStore` (no permission);
+  Android 7-9 saves into the app's own external Downloads folder (`Android/data/app.githubwebview.locked/files/Downloads`, no permission either);
+* the file name is taken from `Content-Disposition`/the URL and sanitised (no directories, control
+  characters or reserved characters), the transfer is capped at **1 GiB**, progress is shown in-app with
+  a Cancel button, and a failed or cancelled transfer deletes its partial file.
+
+Refused by design: `blob:`/`data:` downloads (they would need a JavaScript bridge, which this project
+does not have), `http://`, any host not on the allow-list, and files over the cap. The app never opens
+the saved file: it is yours to open.
 
 Native file pickers stay disabled. Raw/archive links to resource-only hosts are
 blocked as pages. Uploaded attachments, external images not served through approved proxies,

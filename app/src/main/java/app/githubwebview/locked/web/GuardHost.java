@@ -108,7 +108,12 @@ public interface GuardHost {
      */
     void onSignInWindowNavigated(String url);
 
-    /** A download was refused (nothing is ever handed to a download manager or browser). */
+    /**
+     * A download was refused (nothing is ever handed to a download manager, a browser or another app).
+     *
+     * <p>Since downloads are saved by the app itself, this is the safety-net callback for a refusal that
+     * does not come through {@code FileDownloads.Listener}; it must still be reported, never swallowed.</p>
+     */
     void onDownloadBlocked(String url, String mimeType);
 
     /** The page asked to open a local file picker; refused because it would leave the app. */

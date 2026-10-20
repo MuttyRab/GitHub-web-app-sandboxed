@@ -31,10 +31,14 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Locale;
 
+import app.githubwebview.locked.net.FileDownloads;
 import app.githubwebview.locked.policy.GitHubAllowlist;
 import app.githubwebview.locked.policy.BackNavigator;
 import app.githubwebview.locked.policy.PolicyConfig;
@@ -57,8 +61,9 @@ import app.githubwebview.locked.web.WebViewHardening;
  *   <li>{@link #loadVerifiedDestination(String, String)} is the <b>only</b> place that calls
  *       {@code WebView.loadUrl} for the visible WebView, and it re-checks the policy first.</li>
  *   <li>{@code startActivity}/{@code startActivityForResult} are overridden to refuse: this app never
- *       hands control to another application, not even for a download, a file picker or a share
- *       sheet.</li>
+ *       hands control to another application, not even for a file picker or a share sheet. Downloads are
+ *       fetched and saved <em>by the app itself</em> through {@link FileDownloads}, which uses the same
+ *       loopback egress guard as the WebView.</li>
  *   <li>Incoming intents are ignored completely - the activity has no deep-link handling, so another
  *       app cannot steer it.</li>
  *   <li>Every connection the WebView opens - including WebSockets - goes through an in-app loopback
@@ -72,7 +77,7 @@ import app.githubwebview.locked.web.WebViewHardening;
  *       and otherwise asks for a second press before closing.</li>
  * </ul>
  */
-public class MainActivity extends Activity implements GuardHost {
+public class MainActivity extends Activity implements GuardHost, FileDownloads.Listener {
 
     private static final String TAG = "GitHubWebViewLocked";
 
@@ -125,6 +130,12 @@ public class MainActivity extends Activity implements GuardHost {
     private Runnable watchdogTask;
     private boolean resumed;
 
+    /** The one downloader. Guarded by the same policy and the same loopback proxy as the WebView. */
+    private FileDownloads downloads;
+    private AlertDialog downloadDialog;
+    private ProgressBar downloadProgressBar;
+    private TextView downloadProgressText;
+
     private long lastExitBackPressMs;
     private long lastMessageMs;
     private String lastMessage;
@@ -143,6 +154,7 @@ public class MainActivity extends Activity implements GuardHost {
         recordIncomingIntent(getIntent());
 
         handler = new Handler(Looper.getMainLooper());
+        downloads = new FileDownloads(this, policy, metrics, handler, this);
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
@@ -264,7 +276,7 @@ public class MainActivity extends Activity implements GuardHost {
     private void attachPrimaryWebView() {
         chromeClient = new GitHubWebChromeClient(this, this);
         webView = WebViewHardening.createPrimaryWebView(
-                this, new GitHubWebViewClient(this), chromeClient, this);
+                this, new GitHubWebViewClient(this), chromeClient, this, downloads);
         webView.setId(R.id.github_webview);
         pullToRefresh.addView(webView, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -441,6 +453,10 @@ public class MainActivity extends Activity implements GuardHost {
     protected void onDestroy() {
         stopWatchdog();
         hideRefreshSpinner();
+        dismissDownloadDialog();
+        if (downloads != null) {
+            downloads.shutdown();
+        }
         closeSignInWindow("destroy");
         if (chromeClient != null) {
             chromeClient.destroyPopups();
@@ -913,15 +929,136 @@ public class MainActivity extends Activity implements GuardHost {
         }
     }
 
+    /**
+     * Safety net for the {@link GuardHost} contract. The download listener now routes through
+     * {@link FileDownloads} and reports through {@link FileDownloads.Listener} instead, but a refusal that
+     * arrives here must never be silent.
+     */
     @Override
     public void onDownloadBlocked(String url, String mimeType) {
-        // A refused download used to be a two-second toast and nothing else, so a click on "Download ZIP"
-        // or a release asset looked like a dead button and the page underneath never changed. Show the
-        // same native surface every other refusal uses: it names the host, states that nothing was saved,
-        // and keeps the diagnostics one tap away. The refusal itself is unchanged.
         overlay.showBlocked(destinationHost(url, null),
-                "downloads are disabled in this app, so nothing was saved", url == null ? "" : url);
-        onMessage("Downloads are disabled in this app: nothing was saved");
+                "that download is not allowed, so nothing was saved", url == null ? "" : url);
+        onMessage("Download refused: nothing was saved");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Downloads (FileDownloads.Listener) - fetched and saved by the app, never by another app
+    // ---------------------------------------------------------------------------------------------
+
+    @Override
+    public void onDownloadRefused(String url, String host, String reason) {
+        // Same surface as every other refusal: it names the host, the policy reason, and keeps the
+        // diagnostics one tap away.
+        overlay.showBlocked(host, reason, url == null ? "" : url);
+        onMessage("Download refused: " + (reason == null || reason.isEmpty() ? "not allowed" : reason));
+    }
+
+    @Override
+    public void onDownloadStarted(String fileName, long totalBytes) {
+        dismissDownloadDialog();
+        if (!canShowDialogs()) {
+            return;
+        }
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(padding, padding, padding, padding);
+        downloadProgressText = new TextView(this);
+        downloadProgressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        downloadProgressBar.setMax(100);
+        downloadProgressBar.setIndeterminate(totalBytes <= 0);
+        content.addView(downloadProgressText);
+        content.addView(downloadProgressBar);
+        downloadDialog = new AlertDialog.Builder(this)
+                .setTitle("Downloading")
+                .setView(content)
+                .setCancelable(true)
+                .setNegativeButton("Cancel", (dialog, which) -> downloads.cancel())
+                .setOnCancelListener(dialog -> downloads.cancel())
+                .create();
+        downloadDialog.show();
+        showDownloadProgress(fileName, 0L, totalBytes);
+    }
+
+    @Override
+    public void onDownloadProgress(String fileName, long bytesRead, long totalBytes) {
+        if (!canShowDialogs()) {
+            return;
+        }
+        showDownloadProgress(fileName, bytesRead, totalBytes);
+    }
+
+    @Override
+    public void onDownloadSaved(String fileName, String location) {
+        dismissDownloadDialog();
+        Log.i(TAG, "download saved: " + fileName + " in " + location);
+        onMessage("Saved " + fileName + " to " + location);
+    }
+
+    @Override
+    public void onDownloadFailed(String fileName, String reason) {
+        dismissDownloadDialog();
+        Log.w(TAG, "download failed: " + fileName + " (" + reason + ")");
+        if (!canShowDialogs()) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Download failed")
+                .setMessage(fileName + "\n\n" + reason + "\n\nNothing was saved.")
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    @Override
+    public void onDownloadCancelled(String fileName) {
+        dismissDownloadDialog();
+        onMessage("Download cancelled: nothing was saved");
+    }
+
+    /** Progress on the dialog; indeterminate while the server has not said how large the file is. */
+    private void showDownloadProgress(String fileName, long bytesRead, long totalBytes) {
+        if (downloadProgressText == null && downloadDialog == null) {
+            return;
+        }
+        if (downloadProgressBar != null) {
+            if (totalBytes > 0) {
+                downloadProgressBar.setIndeterminate(false);
+                downloadProgressBar.setProgress((int) Math.min(100L, (bytesRead * 100L) / totalBytes));
+            } else {
+                downloadProgressBar.setIndeterminate(true);
+            }
+        }
+        if (downloadProgressText != null) {
+            StringBuilder text = new StringBuilder(fileName).append('\n').append(humanBytes(bytesRead));
+            if (totalBytes > 0) {
+                text.append(" of ").append(humanBytes(totalBytes));
+            }
+            downloadProgressText.setText(text.toString());
+        }
+    }
+
+    private void dismissDownloadDialog() {
+        if (downloadDialog != null) {
+            try {
+                downloadDialog.dismiss();
+            } catch (Throwable ignored) {
+                // a dialog whose activity is already gone is not an error worth reporting
+            }
+            downloadDialog = null;
+        }
+        downloadProgressBar = null;
+        downloadProgressText = null;
+    }
+
+    private static String humanBytes(long bytes) {
+        if (bytes < 1024L) {
+            return bytes + " B";
+        }
+        if (bytes < 1024L * 1024L) {
+            return (bytes / 1024L) + " KB";
+        }
+        long tenths = (bytes * 10L) / (1024L * 1024L);
+        return (tenths / 10L) + "." + (tenths % 10L) + " MB";
     }
 
     @Override

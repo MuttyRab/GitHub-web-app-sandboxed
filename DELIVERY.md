@@ -86,7 +86,10 @@ was used to work around this.
 No completed account login, 2FA/passkey flow, authenticated commit/issue/PR write, workflow edit/run,
 private-repository access or live authenticated build-log stream was tested. Actions run links and
 the completed-job page rendered, but no log rows were observed in the signed-out probe.
-Downloads, file pickers and unapproved external/app launches remain blocked as in Arena.
+File pickers and unapproved external/app launches remain blocked as in Arena. Downloads are saved by
+the app itself since 1.1 work: fetched through the same loopback egress guard and written with
+`MediaStore` (Android 10+) or into the app's own Downloads folder (7-9) - no storage permission, no
+platform download manager, no other app. See [README](README.md#downloads).
 
 The keyboard test was timing-sensitive during development. The final test driver refreshes the
 native editor connection and waits for the actual IME/resize; no app input implementation was changed,

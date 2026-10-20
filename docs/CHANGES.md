@@ -6,9 +6,28 @@ This table follows explicit package/class renames rather than relying on Git sim
 Every old production source has a named counterpart. The 20-file executable-code comparison is
 independently pinned by `upstream-core-fingerprints.json` and verified by CI.
 
-Only site policy/branding/build identity and the documented UA-honesty exception change the app.
-Added Java files are **tests only**. No new production Activity, dashboard, settings, approval flow,
-network client, WebView implementation, input handler or proxy was introduced.
+Imported code is still unchanged except for the recorded exceptions: site policy/branding/build
+identity, the UA-honesty change, and (since the 2026-10-20 download work) refusal reporting plus the
+download listener. The download feature added **two production files** of its own
+(`net/DownloadPlan.java`, `net/FileDownloads.java`), recorded with pinned hashes in
+`upstream-core-fingerprints.json#addedProductionFiles`. No new Activity, dashboard, settings, approval
+flow, WebView implementation, input handler or proxy was introduced; the downloader reuses the
+existing proxy rather than adding a network stack of its own.
+
+## Post-import review: downloads (2026-10-20)
+
+Requested: make downloads work. They do now, without weakening the rest of the wrapper.
+
+| File | Scope |
+|---|---|
+| `app/src/main/java/app/githubwebview/locked/net/DownloadPlan.java` | **New (reviewed addition).** Pure rules: `https` only, allow-listed host via `evaluateRequest`, 5-hop redirect budget, 1 GiB ceiling, hostile-input file naming (traversal, CR/LF, reserved characters, overlong names, MIME-derived extensions). No Android imports, so it is exhaustively JVM-tested. |
+| `app/src/main/java/app/githubwebview/locked/net/FileDownloads.java` | **New (reviewed addition).** Opens every hop through the existing loopback CONNECT proxy (`EgressGuard.port()`; no direct branch), re-validates each redirect, sends the WebView's cookies only to allow-listed hosts, saves via `MediaStore.Downloads` on Android 10+ or the app's own external Downloads folder on 7-9, deletes partial files, reports progress/cancel/save/failure on the main thread. No storage permission, no platform download manager, no other app. |
+| `app/src/main/java/app/githubwebview/locked/web/WebViewHardening.java` | **Recorded exception.** `BlockingDownloadListener` → `GuardedDownloadListener`, which forwards to `FileDownloads`; the WebView factory takes the downloader. Every other hardening switch is untouched. |
+| `app/src/main/java/app/githubwebview/locked/MainActivity.java` | **Recorded exception (extended).** Owns the single `FileDownloads`, shows an in-app progress dialog with Cancel, and reports saved/failed/cancelled/refused natively; `onLoadError` reports a refused destination as a refusal. |
+| `app/src/androidTest/.../web/DownloadGuardTest.java` | Rewritten: unapproved links are still refused synchronously with no network, no file and no hand-off; an approved link with no guard fails closed. |
+| `app/src/androidTest/.../net/FileDownloadTest.java` | **New.** Live end-to-end: launches the activity, waits for the guard, downloads a file from `raw.githubusercontent.com`, asserts the row appears in `MediaStore` with bytes, then deletes it. |
+| `app/src/test/.../net/DownloadPlanTest.java` | **New.** JVM cases for every hostile name, scheme, host, size boundary, MIME shape and redirect code. |
+| `app/src/test/.../SourceInvariantsTest.java` | `downloadsAreRefused` → `downloadsAreSavedByTheAppAndNeverHandedOn`. |
 
 ## Post-import review: refusal messages (2026-10-20)
 
