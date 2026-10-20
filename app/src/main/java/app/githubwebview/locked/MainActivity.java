@@ -714,7 +714,36 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
 
     @Override
     public void onNavigationBlocked(String url, PolicyResult result) {
+        // A resource host can never become the page. When the link is a *file* served by one of them -
+        // GitHub's "Download raw file", a patch, an attached image - the honest outcome is an offer to
+        // save it, not a dead click that only says "blocked". Nothing is fetched until the user taps Save.
+        if (result != null
+                && result.reason() == app.githubwebview.locked.policy.BlockReason.DOCUMENT_NOT_ALLOWED
+                && url != null && url.regionMatches(true, 0, "https://", 0, 8)
+                && canShowDialogs()) {
+            offerToSaveInstead(url, result);
+            return;
+        }
         onMessage("Blocked " + describeDestination(url, result));
+    }
+
+    /**
+     * Offered when a click lands on an allow-listed host that may only serve resources. The page stays
+     * where it was; the file is fetched only if the user says so, through the same guarded downloader.
+     */
+    private void offerToSaveInstead(final String url, PolicyResult result) {
+        String host = destinationHost(url, result);
+        new AlertDialog.Builder(this)
+                .setTitle("Save this file?")
+                .setMessage(host + " serves files for github.com pages, so this app cannot open it as a page.\n\n"
+                        + "Save it to Downloads instead?")
+                .setPositiveButton("Save", (dialog, which) -> {
+                    if (downloads != null) {
+                        downloads.download(url, null, null, -1L);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, (dialog, which) -> onMessage("Nothing was saved"))
+                .show();
     }
 
     @Override

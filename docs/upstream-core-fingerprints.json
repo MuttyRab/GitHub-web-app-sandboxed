@@ -52,16 +52,18 @@
       "upstreamFileSha256": "32a625997c40054079b95a4d4533656d0edaecbe52d62e90570a18f08fbd2921",
       "adaptedCodeSha256": "f54811715ebe52aafae1b026872bc7a05fd2aa2ea8e10ebc67adffed2f8e350f",
       "reviewedException": {
-        "summary": "Downloads are saved by the app (progress dialog, saved/failed/cancelled/refused reporting) and a refused destination is reported as a refusal with its host and policy reason.",
-        "rationale": "Two user reports in one change: Help/Docs links surfaced as 'github.com could not be reached', and downloads did nothing. The refusal wording is now accurate, and the activity owns the one FileDownloads instance whose callbacks drive the native surfaces. No allow-list entry, verdict, permission or loadUrl path changes.",
-        "adaptedCodeSha256": "addd6d47397028e0d7b737d71ad2e985a554c3e506b17dba39dd7dd90641594a",
+        "summary": "Downloads are saved by the app (progress dialog, saved/failed/cancelled/refused reporting), a refused destination is reported as a refusal with its host and reason, and a click that lands on a file-only host offers to save it instead of doing nothing.",
+        "rationale": "Three user reports in one change: Help/Docs links surfaced as 'github.com could not be reached', downloads did nothing, and 'Download raw file' produced no outcome because the file is served inline by an asset host. The refusal wording is now accurate, the activity owns the one FileDownloads instance whose callbacks drive the native surfaces, and an inline file link asks whether to save. No allow-list entry, verdict, permission or loadUrl path changes.",
+        "adaptedCodeSha256": "e163550dc2ab4737cb4b72158c99756eb5dfca39a6ed9bd65b533d723ecee74d",
         "requiredTokens": [
           "verdict",
           "FileDownloads",
           "onDownloadSaved",
           "downloadProgressBar",
           "\"Download refused: nothing was saved\"",
-          "\"Download cancelled: nothing was saved\""
+          "\"Download cancelled: nothing was saved\"",
+          "offerToSaveInstead",
+          "\"Save this file?\""
         ],
         "forbiddenTokens": [
           "\"Downloads are disabled in this app\""
