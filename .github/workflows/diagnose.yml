@@ -1,7 +1,8 @@
 name: Diagnose build
 
-# Temporary: reports the exact compiler/test output as a commit comment so it can be read from
-# environments that cannot download Actions logs or artifacts. Deleted once the branch is green.
+# Temporary: reports compiler/test output as a commit comment, because this workflow's owner cannot
+# download Actions logs or artifacts from the environment the branch is being edited in.
+# Deleted once the branch is green.
 
 on:
   push:
@@ -27,20 +28,69 @@ jobs:
       - name: Compile and run the JVM tests, keeping the output
         run: |
           set +e
-          ./gradlew --no-daemon --console=plain :app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:compileDebugAndroidTestJavaWithJavac \
-            > /tmp/build.log 2>&1
+          ./gradlew --no-daemon --console=plain :app:compileDebugJavaWithJavac :app:testDebugUnitTest \
+            :app:compileDebugAndroidTestJavaWithJavac > /tmp/build.log 2>&1
           echo "gradle exit: $?" >> /tmp/build.log
-          grep -nE "^e: |error:|FAILED|Caused by|What went wrong|BUILD FAILED|tests completed" /tmp/build.log \
-            | head -80 >> /tmp/summary.txt
-          echo "--- tail ---" >> /tmp/summary.txt
-          tail -c 30000 /tmp/build.log >> /tmp/summary.txt
           {
-            echo "### Diagnose build output"
+            echo "### Compile + JVM"
             echo '```'
-            head -c 58000 /tmp/summary.txt
+            grep -nE "error:|FAILED|What went wrong|BUILD (FAILED|SUCCESSFUL)|tests completed" /tmp/build.log | head -60
+            tail -c 12000 /tmp/build.log
             echo '```'
           } > /tmp/comment.md
           gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
-            -f body="$(cat /tmp/comment.md)" --jq '.id' || true
+            -f body="$(head -c 60000 /tmp/comment.md)" --jq '.id' || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  device:
+    name: Emulator run, report failures
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the device tests and keep the output
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_5
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          script: |
+            adb shell settings put secure show_ime_with_hard_keyboard 1
+            ( ./gradlew --no-daemon --console=plain :app:connectedDebugAndroidTest; echo "gradle exit $?" ) \
+              > /tmp/device.log 2>&1
+            find app/build/outputs/androidTest-results -name '*.xml' > /tmp/xmls.txt || true
+            {
+              echo "### Emulator run"
+              echo '#### failing cases'
+              echo '```'
+              grep -h -B2 -A8 "<failure\|<error" $(cat /tmp/xmls.txt) | head -c 26000 || echo "none"
+              echo '```'
+              echo '#### suites'
+              echo '```'
+              grep -h "<testsuite " $(cat /tmp/xmls.txt) | head -30 || echo "no xml"
+              echo '```'
+              echo '#### gradle'
+              echo '```'
+              grep -E "FAILED|tests completed|gradle exit|Exception|BUILD " /tmp/device.log | head -40 || true
+              tail -c 9000 /tmp/device.log
+              echo '```'
+            } > /tmp/comment.md
+            gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+              -f body="$(head -c 60000 /tmp/comment.md)" --jq '.id' || true
         env:
           GH_TOKEN: ${{ github.token }}
