@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   compile:
-    name: Compile and test, report output
+    name: Compile (app + androidTest) and test
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -27,7 +27,7 @@ jobs:
       - name: Compile and run the JVM tests, keeping the output
         run: |
           set +e
-          ./gradlew --no-daemon --console=plain :app:compileDebugJavaWithJavac :app:testDebugUnitTest \
+          ./gradlew --no-daemon --console=plain :app:compileDebugJavaWithJavac :app:testDebugUnitTest :app:compileDebugAndroidTestJavaWithJavac \
             > /tmp/build.log 2>&1
           echo "gradle exit: $?" >> /tmp/build.log
           grep -nE "^e: |error:|FAILED|Caused by|What went wrong|BUILD FAILED|tests completed" /tmp/build.log \
