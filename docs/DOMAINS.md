@@ -145,14 +145,18 @@ No retained resource host was promoted to a page. The Google connection-check ad
 
 ## Intentionally not approved
 
-All Arena hosts; arbitrary external links, downloads, app/deep-link schemes and insecure HTTP;
+All Arena hosts; arbitrary external links, app/deep-link schemes and insecure HTTP;
 GitHub Pages, Gist, Docs/Support/blog external sites, Codespaces/VS Code/Copilot; telemetry such as
 `collector.github.com`; staging hosts; arbitrary S3/Azure accounts; arbitrary enterprise SSO;
 Apple ID and other identity providers; Google Search outside reCAPTCHA, Gmail, Drive, Play and
 unlisted Google hosts. A GitHub-owned name is not by itself approval.
 
-Raw and archive hosts are ASSET-only: inline requests may work but navigating a Raw/ZIP link or
-saving an artifact from inside the wrapper is intentionally still blocked by the original guards.
+Raw and archive hosts are ASSET-only: navigating a Raw/ZIP link is still refused (an asset host can
+never become the page), but the bytes may be **saved** - that is what "resource" means, and since
+`FileDownloads` the app fetches those bytes itself through the same egress guard. A download is judged
+with the request role (`evaluateRequest`), so it can never widen what is navigable: `docs.github.com`,
+`github.blog`, `www.githubstatus.com`, Pages, Gist and every other unlisted host remain unreachable even
+as a download target.
 Download the **APK** from the workflow artifact in your browser, not through this locked wrapper.
 
 ## Google handoff boundary

@@ -9,7 +9,7 @@ The original full review is archived in `docs/upstream-arena/SECURITY.md` and `R
   It checks the allowlist before DNS/connection, has no direct fallback, and is installed before loads.
 * Navigation hooks, request hooks, popup routing, service-worker requests, history checks and the
   three-second watchdog remain. No extra Activity or browser/app launches, URL intents or deep links.
-* No JavaScript bridge, no native downloads/file picker, no camera/microphone/location grants,
+* No JavaScript bridge, no platform download manager, no file picker, no camera/microphone/location grants,
   no mixed content, no file/content URL access, no backup, system CAs only. TLS errors cancel.
 * Release WebView debugging is off. The application contains no credential collection or login automation.
 * The genuine platform UA is retained: no disguising WebView to evade provider restrictions.

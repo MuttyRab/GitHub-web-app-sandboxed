@@ -11,6 +11,9 @@ artifact installed/launched successfully. GitHub and generic Google email-input/
 passed; the actual GitHub Google handoff was unavailable and skipped. No completed authentication
 or authenticated repository mutation/live log stream is claimed.
 
-[Download APK](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163) · [Delivery](../DELIVERY.md) · [Test report](../TEST_REPORT.md).
-The original public demo signing key is retained. Native downloads/file pickers and external app/browser
-launches remain disabled as in Arena. No dashboards, approval screens or extra settings were added.
+[Build run](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) · [Delivery](../DELIVERY.md) · [Test report](../TEST_REPORT.md).
+Artifact downloads require a signed-in GitHub session; this Release asset does not.
+The original public demo signing key is retained. **Downloads are saved by the app itself** (fetched
+through the same loopback egress guard, written with `MediaStore` on Android 10+ or the app's own folder
+on 7-9, no storage permission) and file pickers plus external app/browser launches remain disabled. No
+dashboards, approval screens or extra settings were added.

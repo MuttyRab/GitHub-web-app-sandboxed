@@ -244,13 +244,91 @@ public class SourceInvariantsTest {
         assertTrue("popups must be intercepted", chrome.contains("onCreateWindow"));
     }
 
+    /**
+     * Downloads are saved by the app itself, and the guarantees that made them safe to refuse before are
+     * the same ones that make them safe to perform now:
+     *
+     * <ul>
+     *   <li>no platform download manager, no other app, no share sheet, no browser - nothing is handed
+     *       on;</li>
+     *   <li>no storage permission is declared: Android 10+ writes through {@code MediaStore} and older
+     *       versions into the app's own folder, both of which need none;</li>
+     *   <li>every byte comes through the same loopback egress guard as the WebView. There is no direct
+     *       {@code openConnection()} anywhere, so a missing guard means no download, never an unguarded
+     *       one;</li>
+     *   <li>redirects are followed by hand and re-planned one hop at a time, so no hop escapes the
+     *       policy;</li>
+     *   <li>the transfer is bounded in hops and size, and a failure or cancel deletes its partial
+     *       file.</li>
+     * </ul>
+     */
     @Test
-    public void downloadsAreRefused() throws Exception {
+    public void downloadsAreSavedByTheAppAndNeverHandedOn() throws Exception {
+        String sources = allMainSources();
         String hardening = code("app/githubwebview/locked/web/WebViewHardening.java");
-        assertTrue(hardening.contains("setDownloadListener"));
-        assertFalse("the app must not use the platform download manager",
-                allMainSources().contains("DownloadManager"));
-        assertFalse("nothing may be shared with another app", allMainSources().contains("ACTION_SEND"));
+        String fetcher = code("app/githubwebview/locked/net/FileDownloads.java");
+        String plan = code("app/githubwebview/locked/net/DownloadPlan.java");
+        String main = code("app/githubwebview/locked/MainActivity.java");
+        String manifest = TestPaths.read(TestPaths.manifest());
+
+        assertTrue("the WebView must route downloads to the app's downloader",
+                hardening.contains("setDownloadListener"));
+        assertTrue(hardening.contains("downloads.download("));
+        assertTrue("the one downloader must be created by the activity", main.contains("new FileDownloads("));
+
+        assertFalse("the app must not use the platform download manager", sources.contains("DownloadManager"));
+        assertFalse("nothing may be shared with another app", sources.contains("ACTION_SEND"));
+        assertFalse("no storage permission may ever be declared",
+                manifest.contains("WRITE_EXTERNAL_STORAGE")
+                        || manifest.contains("READ_EXTERNAL_STORAGE")
+                        || manifest.contains("MANAGE_EXTERNAL_STORAGE"));
+        assertFalse("the shared, permission-gated public folder must not be used",
+                sources.contains("getExternalStoragePublicDirectory"));
+
+        assertTrue("every hop goes through the loopback guard", fetcher.contains("EgressGuard.port()"));
+        assertTrue(fetcher.contains("new Proxy(Proxy.Type.HTTP, new InetSocketAddress(EgressProxy.LOOPBACK_HOST, port))"));
+        assertFalse("there must be no direct connection branch", fetcher.contains("openConnection()"));
+        assertTrue("redirects are followed by hand, not by the HTTP client",
+                fetcher.contains("setInstanceFollowRedirects(false)"));
+        assertTrue("every hop is re-planned against the policy", fetcher.contains("DownloadPlan.plan("));
+        assertTrue("the redirect budget must be enforced", fetcher.contains("DownloadPlan.MAX_REDIRECTS"));
+        assertTrue("the transfer must be size-bounded", fetcher.contains("DownloadPlan.tooLarge("));
+
+        assertTrue("Android 10+ saves through MediaStore, with no permission",
+                fetcher.contains("MediaStore.Downloads.EXTERNAL_CONTENT_URI"));
+        assertTrue("a partial file must never be left behind",
+                fetcher.contains("destination.abort()"));
+        assertTrue("only https URLs on allow-listed hosts may be downloaded",
+                plan.contains("policy.evaluateRequest(candidate)"));
+    }
+
+    /**
+     * A refusal has to be reported <em>as a refusal</em>.
+     *
+     * <p>Two messages made perfectly working (if restrictive) behaviour look like a broken app:
+     * {@code onLoadError} printed "github.com could not be reached" even when the destination that was
+     * actually refused was {@code docs.github.com}, and a refused download produced only a transient
+     * toast. Both now use the native overlay, which names the host and the policy reason. The decisions
+     * themselves are unchanged - only what the user is told about them.</p>
+     */
+    @Test
+    public void refusalsAreReportedAsRefusalsNotAsOutages() throws Exception {
+        String main = code("app/githubwebview/locked/MainActivity.java");
+
+        int at = main.indexOf("public void onLoadError(String url, String description)");
+        assertTrue("the load-error path must still exist", at >= 0);
+        String body = main.substring(at, main.indexOf("\n    }", at));
+        assertTrue("a load error must ask the policy whether the destination was actually refused",
+                body.contains("policy.evaluateNavigation(url)"));
+        assertTrue("a refused destination is reported with its host and the policy reason",
+                body.contains("overlay.showBlocked(") && body.contains("destinationHost(url, verdict)"));
+
+        at = main.indexOf("public void onDownloadBlocked(String url, String mimeType)");
+        assertTrue("the download refusal must still exist", at >= 0);
+        body = main.substring(at, main.indexOf("\n    }", at));
+        assertTrue("a refused download must be visible on the overlay, not only a toast",
+                body.contains("overlay.showBlocked("));
+        assertTrue("and it must say that nothing was saved", body.contains("nothing was saved"));
     }
 
     /**

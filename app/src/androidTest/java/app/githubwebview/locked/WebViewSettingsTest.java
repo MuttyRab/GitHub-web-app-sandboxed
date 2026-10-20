@@ -47,7 +47,10 @@ public class WebViewSettingsTest {
                         context,
                         new app.githubwebview.locked.web.GitHubWebViewClient(host),
                         new app.githubwebview.locked.web.GitHubWebChromeClient(context, host),
-                        host);
+                        host,
+                        new app.githubwebview.locked.net.FileDownloads(context, host.policy(), host.metrics(),
+                                new android.os.Handler(android.os.Looper.getMainLooper()),
+                                NoDownloadListener.INSTANCE));
             }
         });
     }
@@ -146,4 +149,39 @@ public class WebViewSettingsTest {
     // NOTE: the guard clients cannot be read back from a WebView (there is no public getter), so their
     // wiring is proven behaviourally instead: WatchdogRecoveryTest shows the WebViewClient reacting to a
     // blocked load, and the pop-up/dialog tests show the WebChromeClient being consulted.
+
+    /** This test never downloads; the downloader only has to exist and behave. */
+    private enum NoDownloadListener implements app.githubwebview.locked.net.FileDownloads.Listener {
+        INSTANCE;
+
+        @Override
+        public void onDownloadRefused(String url, String host, String reason) {
+            // not exercised
+        }
+
+        @Override
+        public void onDownloadStarted(String fileName, long totalBytes) {
+            // not exercised
+        }
+
+        @Override
+        public void onDownloadProgress(String fileName, long bytesRead, long totalBytes) {
+            // not exercised
+        }
+
+        @Override
+        public void onDownloadSaved(String fileName, String location) {
+            // not exercised
+        }
+
+        @Override
+        public void onDownloadFailed(String fileName, String reason) {
+            // not exercised
+        }
+
+        @Override
+        public void onDownloadCancelled(String fileName) {
+            // not exercised
+        }
+    }
 }

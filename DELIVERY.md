@@ -4,12 +4,22 @@
 
 ## Download and install
 
-### [Download the signed GitHub APK workflow artifact](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163)
+### [Open the build run and download the `github-webview-apk` artifact](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407)
 
-Download the ZIP and install **`app/build/outputs/apk/release/app-release.apk`** from it.
+Install **`app/build/outputs/apk/release/app-release.apk`** from the artifact ZIP.
 The ZIP also contains a debug APK, SHA-256 sums, APK badging and signature verification output.
-Choose the **release** APK for normal use. GitHub may require you to sign in to download artifacts.
-The artifact has 90-day retention (currently expires **2027-01-16**); keep your downloaded copy.
+Choose the **release** APK for normal use. **GitHub only serves artifact downloads to a signed-in
+browser session** — the direct per-artifact URL returns `404` when fetched signed-out, so it is not
+linked. The artifact has 90-day retention (currently expires **2027-01-16**); keep your downloaded copy.
+
+For a link that works without signing in, publish a tag. The `release` job then attaches the APKs and
+checksums to a GitHub Release, which is publicly downloadable:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0
+# → https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/releases/download/v1.0.0/app-release.apk
+```
+
 
 | Item | Value |
 |---|---|
@@ -76,7 +86,10 @@ was used to work around this.
 No completed account login, 2FA/passkey flow, authenticated commit/issue/PR write, workflow edit/run,
 private-repository access or live authenticated build-log stream was tested. Actions run links and
 the completed-job page rendered, but no log rows were observed in the signed-out probe.
-Downloads, file pickers and unapproved external/app launches remain blocked as in Arena.
+File pickers and unapproved external/app launches remain blocked as in Arena. Downloads are saved by
+the app itself since 1.1 work: fetched through the same loopback egress guard and written with
+`MediaStore` (Android 10+) or into the app's own Downloads folder (7-9) - no storage permission, no
+platform download manager, no other app. See [README](README.md#downloads).
 
 The keyboard test was timing-sensitive during development. The final test driver refreshes the
 native editor connection and waits for the actual IME/resize; no app input implementation was changed,

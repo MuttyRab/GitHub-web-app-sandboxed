@@ -13,7 +13,9 @@ The install ID is `app.githubwebview.locked` (version 1.0.0 / code 1), separate 
 The original single Activity and WebView, dark native overlays, pull-to-refresh, back behavior,
 OAuth popup window, watchdog, renderer recovery, cookies, hardware rendering and `adjustResize`.
 The pure-Java URL parser and PRODUCT / ASSET / SIGN_IN roles, service-worker guard,
-CONNECT egress proxy with no direct fallback, TLS checks, and escape/download/file-picker refusals.
+CONNECT egress proxy with no direct fallback, TLS checks, escape/file-picker refusals, and the original
+refusal to hand anything to another app. Downloads are the one added capability: they are fetched and
+saved **by the app**, through that same proxy (see [Downloads](#downloads)).
 No dashboards, domain management, approval flows, extra settings, script injection or input CSS fixes.
 
 The start URL is `https://github.com/`. Only `github.com`, `www.github.com` and the approved
@@ -39,12 +41,29 @@ are reused. CI builds debug and **signed release** APKs, checks badging and SHA-
 unit/Android-emulator tests. The workflow artifact is **`github-webview-apk`**; install its
 `app-release.apk`. Build output is not committed to Git.
 
-**[Download the signed APK](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163)** · [Delivery and installation](DELIVERY.md)
+**Get the APK:** open [run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407)
+and download the `github-webview-apk` artifact. GitHub only lets a **signed-in** browser download
+artifacts, so a direct artifact link is not published here — fetched signed-out it answers `404`, which
+is a GitHub rule and not a broken build. For a permanent, sign-in-free link, publish a tag; the
+`release` job then attaches the APKs and checksums to a GitHub Release:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0   # → …/releases/download/v1.0.0/app-release.apk
+```
+
+[Delivery and installation](DELIVERY.md)
 
 [Run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) passed: **4,151 JVM cases**, **60 Android tests passed / 1 skipped / 0 failed**,
 and the exact signed release APK installed and launched. Native GitHub and generic Google identifier
 entry/editing/resize/overlap checks passed. The actual GitHub → Google handoff was skipped because
 GitHub did not offer the button in this WebView; no completed authentication is claimed.
+
+[Run 39415422258](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39415422258)
+passed all four jobs after downloads were added: source preservation, **4,169 JVM cases (0 failed)**,
+the signed APK build, and the emulator suite (**61 passed, 0 failed, 2 skipped**). The emulator run
+includes a live save: `FileDownloadTest` downloads a real file through the loopback guard, asserts the
+`MediaStore` row and its size, then deletes it. Help and download refusals are still covered by
+`refusalsAreReportedAsRefusalsNotAsOutages`.
 
 See [TEST_REPORT.md](TEST_REPORT.md) for scope/earlier failures and [docs/EVIDENCE.md](docs/EVIDENCE.md)
 for actual results. The original Arena reports are archived under `docs/upstream-arena/`, not reused
@@ -64,9 +83,50 @@ usually different signing keys: uninstall one before installing the other. Neith
 Android 7+ (minSdk 24), compile/target SDK 35, JDK 17. A WebView supporting AndroidX
 `PROXY_OVERRIDE` is required; otherwise the original error screen fails closed.
 
-## Limits preserved on purpose
+## What the app will not open (and what you will see)
 
-Downloads and native file pickers stay disabled. Raw/archive links to resource-only hosts are
+Two things on github.com leave the site on a click. Both are refused on purpose, and both now say so
+instead of looking like a fault:
+
+* **Help.** GitHub's Help, Docs, Support, Status and Blog entries are redirects to
+  `docs.github.com`, `support.github.com`, `www.githubstatus.com` and `github.blog` — separate sites
+  that are deliberately not on the allow-list (Terms and Privacy redirect to `docs.github.com` too).
+  Clicking one shows the native "Blocked by this app" panel naming the host and the policy reason.
+  By direct URL, only `github.com` and `www.github.com` are page hosts; every other listed host is a
+  resource host for a github.com page and can never become the page.
+* **Downloads from anywhere else.** See [Downloads](#downloads) for what is allowed; a link to an
+  unapproved host, a `blob:`/`data:` link, cleartext `http` or anything above the size limit raises the
+  same native panel, with the refused host and the policy reason, and nothing is written.
+
+A load error that the policy did not cause (no network, TLS, renderer) still reports as a load
+failure; one that *was* a refusal is reported as a refusal with the refused host. "Copy diagnostics"
+in that panel gives the exact `BlockReason`.
+
+## Downloads
+
+GitHub's download links point at resource hosts (`raw.githubusercontent.com` for a file,
+`codeload.github.com` for an archive, `objects.githubusercontent.com` for a release asset). Those hosts
+are on the allow-list as **resources**, so the app can save their bytes - and now does:
+
+* the WebView's `DownloadListener` forwards the URL to the app's own downloader; **no** platform
+  download manager, browser, share sheet or other app is ever involved, and no storage permission is
+  declared;
+* the bytes are fetched by the app **through the same loopback CONNECT proxy as the WebView**, so the
+  host must still be allow-listed and the port is still 443. There is no direct-connection branch: if
+  the guard is not running, the download fails instead of going around it;
+* every redirect hop is re-checked against the policy (at most 5), so a redirect into an unapproved
+  host is refused before it is opened;
+* Android 10+ saves into the system **Downloads** collection via `MediaStore` (no permission);
+  Android 7-9 saves into the app's own external Downloads folder (`Android/data/app.githubwebview.locked/files/Downloads`, no permission either);
+* the file name is taken from `Content-Disposition`/the URL and sanitised (no directories, control
+  characters or reserved characters), the transfer is capped at **1 GiB**, progress is shown in-app with
+  a Cancel button, and a failed or cancelled transfer deletes its partial file.
+
+Refused by design: `blob:`/`data:` downloads (they would need a JavaScript bridge, which this project
+does not have), `http://`, any host not on the allow-list, and files over the cap. The app never opens
+the saved file: it is yours to open.
+
+Native file pickers stay disabled. Raw/archive links to resource-only hosts are
 blocked as pages. Uploaded attachments, external images not served through approved proxies,
 third-party SSO, GitHub Pages, Gist, Codespaces, Copilot and arbitrary external sites are not made
 browsable. In-page repository browsing, editing, commits, issues, PRs and Actions depend on the real

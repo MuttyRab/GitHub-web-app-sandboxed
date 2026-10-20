@@ -1,7 +1,6 @@
 package app.githubwebview.locked.web;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import android.webkit.CookieManager;
@@ -13,8 +12,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-import java.util.Locale;
-
+import app.githubwebview.locked.net.FileDownloads;
 import app.githubwebview.locked.policy.PolicyConfig;
 import app.githubwebview.locked.policy.PolicyMetrics;
 import app.githubwebview.locked.policy.PolicyResult;
@@ -112,17 +110,20 @@ public final class WebViewHardening {
      * Create the single visible WebView with the guard clients attached.
      *
      * <p>The clients are passed in (rather than constructing them here) so that the activity holds the
-     * only reference to them and no hidden WebView getter is needed.</p>
+     * only reference to them and no hidden WebView getter is needed. The download handler is passed in
+     * for the same reason: the activity owns the one downloader, and the WebView only forwards the
+     * request to it.</p>
      */
     public static WebView createPrimaryWebView(Context context, android.webkit.WebViewClient client,
-                                               android.webkit.WebChromeClient chromeClient, GuardHost host) {
+                                               android.webkit.WebChromeClient chromeClient, GuardHost host,
+                                               FileDownloads downloads) {
         WebView webView = new WebView(context);
         applyHardenedSettings(webView.getSettings());
         applyCookiePolicy(context, webView);
         webView.setWebViewClient(client);
         webView.setWebChromeClient(chromeClient);
         webView.setBackgroundColor(android.graphics.Color.BLACK);
-        webView.setDownloadListener(new BlockingDownloadListener(host));
+        webView.setDownloadListener(new GuardedDownloadListener(downloads));
         // There is deliberately no Java-to-JavaScript bridge anywhere in this project: a bridge is the
         // classic WebView remote-code-execution path, and this wrapper needs none (SourceInvariantsTest
         // fails the build if one is ever added).
@@ -169,30 +170,27 @@ public final class WebViewHardening {
     }
 
     /**
-     * Refuses every download: nothing is ever handed to DownloadManager or an external browser.
-     * Package-private so an instrumented test can drive it directly.
+     * Hands a download to the app's own downloader - never to the platform download manager, a browser
+     * or a file picker. The downloader decides (synchronously) whether the URL passes the policy, so a
+     * refused URL is reported before anything is opened, fetched or written.
+     *
+     * <p>Package-private so an instrumented test can drive it directly.</p>
      */
-    static final class BlockingDownloadListener implements DownloadListener {
+    static final class GuardedDownloadListener implements DownloadListener {
 
-        private final GuardHost host;
+        private final FileDownloads downloads;
 
-        BlockingDownloadListener(GuardHost host) {
-            this.host = host;
+        GuardedDownloadListener(FileDownloads downloads) {
+            this.downloads = downloads;
         }
 
         @Override
         public void onDownloadStart(String url, String userAgent, String contentDisposition,
                                     String mimeType, long contentLength) {
-            String hostName = "";
-            try {
-                Uri uri = Uri.parse(url);
-                hostName = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
-            } catch (Throwable ignored) {
-                // reporting only
+            if (downloads == null) {
+                return; // no downloader wired: fail closed by doing nothing rather than by leaking
             }
-            host.metrics().increment(PolicyMetrics.Counter.BLOCKED_DOWNLOADS);
-            host.metrics().recordBlock(app.githubwebview.locked.policy.BlockReason.CAPABILITY_DISABLED, hostName, url);
-            host.onDownloadBlocked(url, mimeType);
+            downloads.download(url, contentDisposition, mimeType, contentLength);
         }
     }
 }

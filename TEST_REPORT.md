@@ -23,7 +23,7 @@ checks, immutable config/back-navigation/metrics tests, real loopback CONNECT so
 resource and source invariants. App ID is `app.githubwebview.locked`, version 1.0.0 / code 1.
 
 Release SHA-256: `ab044ecc6ea2da7c76747c83fee35739e0de0324fd8eb93eb36d8f16c8aa1dd8`.
-[Download APK artifact](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163). [Device evidence](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152014368).
+[APK artifact in run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) (GitHub requires a signed-in session for artifact downloads). [Device evidence](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152014368).
 
 ## Actual Android environment
 
@@ -104,6 +104,9 @@ telemetry such as `collector.github.com` and `play.google.com/log` remained refu
 | [39168377245](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39168377245) / `105ca07` | 4,151 JVM pass; device 59 pass, 1 fail, 1 skip; release installed | GitHub IME visibility remained timing-sensitive; generic Google input passed |
 | [39169606407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39169606407) / `92ee140` | 4,151 JVM pass; device 59 pass, 1 fail, 1 skip; release installed | Explicit normal IME request alone was insufficient; final driver refreshes the native editor connection and gives its handshake a UI turn |
 | [39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) / `258e549` | **4,151 JVM pass; device 60 pass, 0 fail, 1 skip; exact release installed** | Delivered artifact |
+| [39405364177](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39405364177) / `58b224d` | Preservation check, JVM suite, APK build and device suite all passed (all four jobs green) | Refusal-message change ([diagnosis](docs/DIAGNOSIS-help-downloads.md)); counts are in that run's step summary |
+| [39417461337](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39417461337) / `bc2056b` | **All four jobs green** (4,169 JVM cases; device 61 passed, 0 failed, 2 skipped) | Adds the save-offer for an inline file link; downloads and refusals unchanged. Two Android CI runs were created for this commit: this one passed, while the sibling run `39417453572` had the same two live-provider failures as the earlier `39168377245`/`39169606407` runs ("tap must focus the real input", IME timing) - none of the download tests failed in either run. |
+| [39415422258](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39415422258) / `a0dd313` | **4,169 JVM pass, 0 failed**; device **61 pass, 0 fail, 2 skip**; all four jobs green | Downloads saved in-app. The two skips are provider/guard-availability assumptions (`DownloadGuardTest.anApprovedLinkFailsClosedWhenTheGuardIsNotRunning` and one Google-form case). `FileDownloadTest` passed: a real transfer through the loopback guard and a real `MediaStore` row, deleted afterwards. The sibling push run for the same commit (`39415430957`) had one emulator-job flake in the live provider tests, the timing sensitivity already documented above. |
 
 The app's input/rendering code was **not** changed to address test-driver timing. No failing test
 was deleted or relabeled as a skip. The final driver uses native touch/IME operations, not forced
