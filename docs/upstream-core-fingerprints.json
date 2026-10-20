@@ -179,7 +179,7 @@
   "addedProductionFiles": {
     "app/src/main/java/app/githubwebview/locked/net/DownloadPlan.java": {
       "purpose": "Pure rules for a saved download: https-only, allow-listed host, redirect budget, 1 GiB ceiling, and hostile-input file naming. No Android dependency, exhaustively JVM-tested.",
-      "codeSha256": "64b45b058442322c8cd771c89e13e00e6e9f0a63973cd632628363f892040a93"
+      "codeSha256": "67f4f167d672661c09158ad453579ba90639fc34272c37c2925bb9f29c64ecfb"
     },
     "app/src/main/java/app/githubwebview/locked/net/FileDownloads.java": {
       "purpose": "Fetches a download through the loopback egress guard (no direct connection), re-validates every redirect hop, and saves through MediaStore (Android 10+) or the app's own folder (7-9). No storage permission, no platform download manager, no other app.",

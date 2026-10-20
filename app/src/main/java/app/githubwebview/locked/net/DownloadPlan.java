@@ -357,15 +357,49 @@ public final class DownloadPlan {
         return truncate(result);
     }
 
-    /** Keep the extension when the name has to be shortened. */
+    /** Keep the extension - including a compound one such as {@code .tar.gz} - when the name is shortened. */
     private static String truncate(String name) {
         if (name.length() <= MAX_NAME_LENGTH) {
             return name;
         }
-        int dot = name.lastIndexOf('.');
-        String extension = dot > 0 && name.length() - dot <= 16 ? name.substring(dot) : "";
+        String extension = trailingExtension(name);
         int keep = Math.max(1, MAX_NAME_LENGTH - extension.length());
         return name.substring(0, keep) + extension;
+    }
+
+    /**
+     * The suffix that must survive truncation: {@code .gz} when there is one, or a compound
+     * {@code .tar.gz} / {@code .min.js} when both parts are short and alphanumeric.
+     */
+    private static String trailingExtension(String name) {
+        int lastDot = name.lastIndexOf('.');
+        if (lastDot <= 0 || lastDot == name.length() - 1) {
+            return "";
+        }
+        String tail = name.substring(lastDot);
+        if (!isExtensionPart(tail)) {
+            return "";
+        }
+        int previousDot = name.lastIndexOf('.', lastDot - 1);
+        if (previousDot > 0) {
+            String compound = name.substring(previousDot);
+            if (compound.length() <= 16 && isExtensionPart(name.substring(previousDot, lastDot))) {
+                return compound;
+            }
+        }
+        return tail;
+    }
+
+    private static boolean isExtensionPart(String part) {
+        if (part.length() < 2 || part.length() > 10 || part.charAt(0) != '.') {
+            return false;
+        }
+        for (int i = 1; i < part.length(); i++) {
+            if (!Character.isLetterOrDigit(part.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Add the MIME-derived extension when the name has none, so a saved file stays recognisable. */
