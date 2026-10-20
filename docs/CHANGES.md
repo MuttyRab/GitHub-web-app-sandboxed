@@ -10,6 +10,21 @@ Only site policy/branding/build identity and the documented UA-honesty exception
 Added Java files are **tests only**. No new production Activity, dashboard, settings, approval flow,
 network client, WebView implementation, input handler or proxy was introduced.
 
+## Post-import review: refusal messages (2026-10-20)
+
+Reported symptom: "Help" and "Downloads" do nothing. Diagnosis and evidence are in
+[DIAGNOSIS-help-downloads.md](DIAGNOSIS-help-downloads.md). The refusals themselves are correct and stay
+in place; what changed is that they now say so.
+
+| File | Scope |
+|---|---|
+| `app/src/main/java/app/githubwebview/locked/MainActivity.java` | **Recorded behavioural exception** (see `reviewedException` in `upstream-core-fingerprints.json`): `onLoadError` asks the policy whether the destination was actually refused and, if so, shows the existing native overlay with the refused host and reason instead of reporting a github.com outage; `onDownloadBlocked` shows that same overlay ("downloads are disabled in this app, so nothing was saved") instead of only a toast. No allow-list entry, verdict, permission, capability or `loadUrl` path changes. |
+| `app/src/main/res/values/strings.xml` | Error-overlay title no longer claims github.com; overlay footer lists Help/Docs/Support/Status/Blog and downloads as separate, refused destinations. |
+| `scripts/verify-preserved-core.py` | Verifies `reviewedException` rows instead of skipping them: rationale required, hash must match, added tokens must still be present and replaced tokens must stay gone; a stale exception also fails. |
+| `app/src/test/.../SourceInvariantsTest.java` | New JVM invariant `refusalsAreReportedAsRefusalsNotAsOutages`. |
+| `docs/upstream-core-fingerprints.json` | Records the exception and its rationale. |
+| `README.md`, `DELIVERY.md`, `TEST_REPORT.md`, `docs/EVIDENCE.md`, `docs/RELEASE_NOTES.md` | Replace the direct artifact URL (404 when fetched signed-out) with the run page plus the `v*` tag → Release path for a sign-in-free download. |
+
 ## Original files changed or renamed
 
 | Original path | GitHub path (same path if unchanged name) | Scope |

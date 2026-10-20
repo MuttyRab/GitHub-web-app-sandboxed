@@ -716,6 +716,18 @@ public class MainActivity extends Activity implements GuardHost {
     public void onLoadError(String url, String description) {
         hideRefreshSpinner();
         Log.i(TAG, "main frame load error: " + description);
+        // A load only ever starts on an allowed URL, so a failure that names a different host means the
+        // page was redirected off github.com and the destination was refused. That is a policy decision,
+        // not a github.com outage: reporting it as one is why every Help/Docs/Support link and every
+        // download looked like the app was broken. Ask the policy which case this is and say so.
+        PolicyResult verdict = policy.evaluateNavigation(url);
+        if (!verdict.isAllowed()) {
+            String host = destinationHost(url, verdict);
+            overlay.showBlocked(host, verdict.reason() == null ? "" : verdict.reason().humanMessage(),
+                    url == null ? "" : url);
+            onMessage("Blocked " + describeDestination(url, verdict));
+            return;
+        }
         overlay.showError("github.com could not be reached (" + description + ").\n\n"
                 + "Check the network connection and try again, or copy the diagnostics report.");
     }
@@ -903,7 +915,13 @@ public class MainActivity extends Activity implements GuardHost {
 
     @Override
     public void onDownloadBlocked(String url, String mimeType) {
-        onMessage("Downloads are disabled in this app");
+        // A refused download used to be a two-second toast and nothing else, so a click on "Download ZIP"
+        // or a release asset looked like a dead button and the page underneath never changed. Show the
+        // same native surface every other refusal uses: it names the host, states that nothing was saved,
+        // and keeps the diagnostics one tap away. The refusal itself is unchanged.
+        overlay.showBlocked(destinationHost(url, null),
+                "downloads are disabled in this app, so nothing was saved", url == null ? "" : url);
+        onMessage("Downloads are disabled in this app: nothing was saved");
     }
 
     @Override

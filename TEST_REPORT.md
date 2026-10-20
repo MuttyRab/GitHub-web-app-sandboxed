@@ -23,7 +23,7 @@ checks, immutable config/back-navigation/metrics tests, real loopback CONNECT so
 resource and source invariants. App ID is `app.githubwebview.locked`, version 1.0.0 / code 1.
 
 Release SHA-256: `ab044ecc6ea2da7c76747c83fee35739e0de0324fd8eb93eb36d8f16c8aa1dd8`.
-[Download APK artifact](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163). [Device evidence](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152014368).
+[APK artifact in run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) (GitHub requires a signed-in session for artifact downloads). [Device evidence](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152014368).
 
 ## Actual Android environment
 

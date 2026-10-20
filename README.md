@@ -39,7 +39,17 @@ are reused. CI builds debug and **signed release** APKs, checks badging and SHA-
 unit/Android-emulator tests. The workflow artifact is **`github-webview-apk`**; install its
 `app-release.apk`. Build output is not committed to Git.
 
-**[Download the signed APK](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163)** · [Delivery and installation](DELIVERY.md)
+**Get the APK:** open [run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407)
+and download the `github-webview-apk` artifact. GitHub only lets a **signed-in** browser download
+artifacts, so a direct artifact link is not published here — fetched signed-out it answers `404`, which
+is a GitHub rule and not a broken build. For a permanent, sign-in-free link, publish a tag; the
+`release` job then attaches the APKs and checksums to a GitHub Release:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0   # → …/releases/download/v1.0.0/app-release.apk
+```
+
+[Delivery and installation](DELIVERY.md)
 
 [Run 39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) passed: **4,151 JVM cases**, **60 Android tests passed / 1 skipped / 0 failed**,
 and the exact signed release APK installed and launched. Native GitHub and generic Google identifier
@@ -64,9 +74,29 @@ usually different signing keys: uninstall one before installing the other. Neith
 Android 7+ (minSdk 24), compile/target SDK 35, JDK 17. A WebView supporting AndroidX
 `PROXY_OVERRIDE` is required; otherwise the original error screen fails closed.
 
-## Limits preserved on purpose
+## What the app will not open (and what you will see)
 
-Downloads and native file pickers stay disabled. Raw/archive links to resource-only hosts are
+Two things on github.com leave the site on a click. Both are refused on purpose, and both now say so
+instead of looking like a fault:
+
+* **Help.** GitHub's Help, Docs, Support, Status and Blog entries are redirects to
+  `docs.github.com`, `support.github.com`, `www.githubstatus.com` and `github.blog` — separate sites
+  that are deliberately not on the allow-list (Terms and Privacy redirect to `docs.github.com` too).
+  Clicking one shows the native "Blocked by this app" panel naming the host and the policy reason.
+  By direct URL, only `github.com` and `www.github.com` are page hosts; every other listed host is a
+  resource host for a github.com page and can never become the page.
+* **Downloads.** Every GitHub download redirects to a resource-only host
+  (`raw.githubusercontent.com` for a file, `codeload.github.com` for an archive,
+  `objects.githubusercontent.com` for a release asset), and the app additionally installs a
+  `DownloadListener` that refuses every transfer. Nothing is written to storage and no other app or
+  browser is launched. A refused download now raises the same native panel ("downloads are disabled in
+  this app, so nothing was saved") instead of only a short toast.
+
+A load error that the policy did not cause (no network, TLS, renderer) still reports as a load
+failure; one that *was* a refusal is reported as a refusal with the refused host. "Copy diagnostics"
+in that panel gives the exact `BlockReason`.
+
+Native file pickers stay disabled. Raw/archive links to resource-only hosts are
 blocked as pages. Uploaded attachments, external images not served through approved proxies,
 third-party SSO, GitHub Pages, Gist, Codespaces, Copilot and arbitrary external sites are not made
 browsable. In-page repository browsing, editing, commits, issues, PRs and Actions depend on the real

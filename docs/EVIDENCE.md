@@ -8,7 +8,7 @@ The full XML, logs, screenshots, badging and checksums are in its artifacts.
 
 | Artifact | Retention / contents |
 |---|---|
-| [github-webview-apk](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151879163) | 90 days; signed release, debug APK, hashes, badging, signature output |
+| [github-webview-apk](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) (open the run; artifact downloads need a signed-in GitHub session) | 90 days; signed release, debug APK, hashes, badging, signature output |
 | [instrumented-test-evidence](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152014368) | 30 days; JUnit XML/HTML, device logs/provider info, live-form/page screenshots, exact release install/launch evidence |
 | [unit-test-results](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12152008489) | 30 days; JVM JUnit XML/HTML |
 | [signed-out-site-observations](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407/artifacts/12151709888) | 30 days; separate desktop browser resource/status observations and screenshots, not Android login proof |

@@ -254,6 +254,35 @@ public class SourceInvariantsTest {
     }
 
     /**
+     * A refusal has to be reported <em>as a refusal</em>.
+     *
+     * <p>Two messages made perfectly working (if restrictive) behaviour look like a broken app:
+     * {@code onLoadError} printed "github.com could not be reached" even when the destination that was
+     * actually refused was {@code docs.github.com}, and a refused download produced only a transient
+     * toast. Both now use the native overlay, which names the host and the policy reason. The decisions
+     * themselves are unchanged - only what the user is told about them.</p>
+     */
+    @Test
+    public void refusalsAreReportedAsRefusalsNotAsOutages() throws Exception {
+        String main = code("app/githubwebview/locked/MainActivity.java");
+
+        int at = main.indexOf("public void onLoadError(String url, String description)");
+        assertTrue("the load-error path must still exist", at >= 0);
+        String body = main.substring(at, main.indexOf("\n    }", at));
+        assertTrue("a load error must ask the policy whether the destination was actually refused",
+                body.contains("policy.evaluateNavigation(url)"));
+        assertTrue("a refused destination is reported with its host and the policy reason",
+                body.contains("overlay.showBlocked(") && body.contains("destinationHost(url, verdict)"));
+
+        at = main.indexOf("public void onDownloadBlocked(String url, String mimeType)");
+        assertTrue("the download refusal must still exist", at >= 0);
+        body = main.substring(at, main.indexOf("\n    }", at));
+        assertTrue("a refused download must be visible on the overlay, not only a toast",
+                body.contains("overlay.showBlocked("));
+        assertTrue("and it must say that nothing was saved", body.contains("nothing was saved"));
+    }
+
+    /**
      * Exactly two WebViews can exist, and both are accounted for:
      *
      * <ol>

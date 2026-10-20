@@ -45,12 +45,25 @@
       "github.com"
     ]
   ],
-  "behavioralException": "WebViewHardening: remove the inherited user-agent masking block, retaining the genuine platform WebView UA. No other runtime code change.",
+  "behavioralException": "Two recorded exceptions. WebViewHardening: remove the inherited user-agent masking block, retaining the genuine platform WebView UA. MainActivity: the user-facing text for a refused destination and for a refused download (onLoadError now asks the policy and reports the refused host via the existing overlay; onDownloadBlocked uses the same overlay and states that nothing was saved). No allow-list entry, decision, permission, capability or load path changes.",
   "files": {
     "app/src/main/java/app/githubwebview/locked/MainActivity.java": {
       "upstreamPath": "app/src/main/java/app/arenawebview/locked/MainActivity.java",
       "upstreamFileSha256": "32a625997c40054079b95a4d4533656d0edaecbe52d62e90570a18f08fbd2921",
-      "adaptedCodeSha256": "f54811715ebe52aafae1b026872bc7a05fd2aa2ea8e10ebc67adffed2f8e350f"
+      "adaptedCodeSha256": "f54811715ebe52aafae1b026872bc7a05fd2aa2ea8e10ebc67adffed2f8e350f",
+      "reviewedException": {
+        "summary": "Refused destinations are reported as refusals, with the host and policy reason; a refused download is shown on the overlay, not only a transient toast.",
+        "rationale": "Users reported the app as broken: a redirect to docs.github.com surfaced as 'github.com could not be reached', and a blocked download looked like a dead button. Feedback only - the policy verdicts, the allow-list, the download listener and the single loadUrl path are untouched.",
+        "adaptedCodeSha256": "ffebb6dfc6db987d03ae38401646067b42857a86c1b8660e8d1f5f1bf0c909fa",
+        "requiredTokens": [
+          "verdict",
+          "\"downloads are disabled in this app, so nothing was saved\"",
+          "\"Downloads are disabled in this app: nothing was saved\""
+        ],
+        "forbiddenTokens": [
+          "\"Downloads are disabled in this app\""
+        ]
+      }
     },
     "app/src/main/java/app/githubwebview/locked/net/EgressProxy.java": {
       "upstreamPath": "app/src/main/java/app/arenawebview/locked/net/EgressProxy.java",
