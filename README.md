@@ -56,6 +56,11 @@ and the exact signed release APK installed and launched. Native GitHub and gener
 entry/editing/resize/overlap checks passed. The actual GitHub → Google handoff was skipped because
 GitHub did not offer the button in this WebView; no completed authentication is claimed.
 
+[Run 39405364177](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39405364177)
+re-ran everything after the refusal-message change and passed all four jobs: source preservation, the
+JVM suite (including the new `refusalsAreReportedAsRefusalsNotAsOutages` invariant), the APK build and
+the emulator suite. That change touches only what the app says when it refuses something.
+
 See [TEST_REPORT.md](TEST_REPORT.md) for scope/earlier failures and [docs/EVIDENCE.md](docs/EVIDENCE.md)
 for actual results. The original Arena reports are archived under `docs/upstream-arena/`, not reused
 as evidence for this APK. [Exact changed files](docs/CHANGES.md) · [All domains/roles](docs/DOMAINS.md)

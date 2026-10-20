@@ -104,6 +104,7 @@ telemetry such as `collector.github.com` and `play.google.com/log` remained refu
 | [39168377245](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39168377245) / `105ca07` | 4,151 JVM pass; device 59 pass, 1 fail, 1 skip; release installed | GitHub IME visibility remained timing-sensitive; generic Google input passed |
 | [39169606407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39169606407) / `92ee140` | 4,151 JVM pass; device 59 pass, 1 fail, 1 skip; release installed | Explicit normal IME request alone was insufficient; final driver refreshes the native editor connection and gives its handshake a UI turn |
 | [39170410407](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39170410407) / `258e549` | **4,151 JVM pass; device 60 pass, 0 fail, 1 skip; exact release installed** | Delivered artifact |
+| [39405364177](https://github.com/markcollege2026-droid/GitHub-web-app-sandboxed/actions/runs/39405364177) / `58b224d` | Preservation check, JVM suite, APK build and device suite all passed (all four jobs green) | Refusal-message change ([diagnosis](docs/DIAGNOSIS-help-downloads.md)); counts are in that run's step summary |
 
 The app's input/rendering code was **not** changed to address test-driver timing. No failing test
 was deleted or relabeled as a skip. The final driver uses native touch/IME operations, not forced
