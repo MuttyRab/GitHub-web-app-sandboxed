@@ -1,0 +1,46 @@
+name: Diagnose build
+
+# Temporary: reports the exact compiler/test output as a commit comment so it can be read from
+# environments that cannot download Actions logs or artifacts. Deleted once the branch is green.
+
+on:
+  push:
+    branches:
+      - 'arena/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    name: Compile and test, report output
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compile and run the JVM tests, keeping the output
+        run: |
+          set +e
+          ./gradlew --no-daemon --console=plain :app:compileDebugJavaWithJavac :app:testDebugUnitTest \
+            > /tmp/build.log 2>&1
+          echo "gradle exit: $?" >> /tmp/build.log
+          grep -nE "^e: |error:|FAILED|Caused by|What went wrong|BUILD FAILED|tests completed" /tmp/build.log \
+            | head -80 >> /tmp/summary.txt
+          echo "--- tail ---" >> /tmp/summary.txt
+          tail -c 30000 /tmp/build.log >> /tmp/summary.txt
+          {
+            echo "### Diagnose build output"
+            echo '```'
+            head -c 58000 /tmp/summary.txt
+            echo '```'
+          } > /tmp/comment.md
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+            -f body="$(cat /tmp/comment.md)" --jq '.id' || true
+        env:
+          GH_TOKEN: ${{ github.token }}
