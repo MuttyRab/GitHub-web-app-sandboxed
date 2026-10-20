@@ -73,6 +73,7 @@ jobs:
           script: |
             ./gradlew --no-daemon --console=plain :app:connectedDebugAndroidTest > /tmp/device.log 2>&1
             echo "gradle exit: $?" >> /tmp/device.log
+            adb logcat -d -s GitHubWebViewLocked:V > /tmp/logcat.txt 2>&1 || true
       - name: Report device results
         if: always()
         run: |

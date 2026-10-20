@@ -127,8 +127,8 @@ public class FileDownloadTest {
             assertTrue("the download must be accepted", downloads.download(SOURCE_URL, null, "text/plain", -1L));
             assertTrue("the transfer must finish", listener.done.await(DOWNLOAD_TIMEOUT_MS, TimeUnit.SECONDS));
 
-            assertNull("nothing may be refused", listener.refused.get());
-            assertNull("nothing may fail", listener.failure.get());
+            assertNull("nothing may be refused, but: " + listener.refused.get(), listener.refused.get());
+            assertNull("nothing may fail, but: " + listener.failure.get(), listener.failure.get());
             assertEquals("README.md", listener.savedName.get());
             assertNotNull(listener.savedLocation.get());
             assertTrue("bytes must have arrived", listener.bytes.get() > 0L);
