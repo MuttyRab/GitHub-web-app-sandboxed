@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * GitHub configuration for the original Arena wrapper, not a new policy engine.
+ * Combined Arena + GitHub configuration for the original locked-down WebView engine.
  *
- * <p>PRODUCT = github.com and its www redirect. SIGN_IN = accounts.google.com only.
+ * <p>PRODUCT = Arena, prior GitHub hosts and the approved Drive host. SIGN_IN = accounts.google.com only.
  * All other entries are ASSET: requests and embedded documents, never top-level pages, redirects
  * or pop-up destinations. Exact hosts only; no suffix matches, wildcards, remote configuration or
  * user approvals. Every connection still passes the original CONNECT proxy on port 443.</p>
@@ -25,7 +25,8 @@ import java.util.Map;
 public final class GitHubAllowlist {
 
     /** The only page the app ever opens on its own. */
-    public static final String PRIMARY_URL = "https://github.com/";
+    public static final String PRIMARY_URL = "https://arena.ai/";
+    public static final String GITHUB_URL = "https://github.com/";
     public static final String DRIVE_URL = "https://drive.google.com/drive/u/0/my-drive";
 
     /** Exact end-point of every redirect that the wrapper follows back into the app. */
@@ -99,6 +100,19 @@ public final class GitHubAllowlist {
                 "Canonical alternate host for the same site (redirects to github.com)."));
         entries.add(AllowEntry.anyPath("drive.google.com",
                 "User-selectable Google Drive website; exact host only."));
+        // Restore original Arena product hosts without dropping the GitHub or Drive whitelist.
+        entries.add(AllowEntry.anyPath("arena.ai", "Arena main website and Agent Mode UI."));
+        entries.add(AllowEntry.anyPath("www.arena.ai", "Arena canonical alternate website."));
+        entries.add(AllowEntry.anyPath("auth.arena.ai", "Arena first-party authentication."));
+        entries.add(AllowEntry.anyPath("cdn.arena.ai", "Arena first-party static assets."));
+        entries.add(AllowEntry.anyPath("agent.arena.ai", "Arena Agent Mode endpoint."));
+        entries.add(AllowEntry.anyPath("code.arena.ai", "Arena code and artifacts."));
+        entries.add(AllowEntry.anyPath("indexable.arena.ai", "Arena indexable content."));
+        entries.add(AllowEntry.anyPath("blog.arena.ai", "Arena first-party blog."));
+        entries.add(AllowEntry.anyPath("news.arena.ai", "Arena first-party news."));
+        entries.add(AllowEntry.anyPath("help.arena.ai", "Arena help centre."));
+        entries.add(AllowEntry.anyPath("status.arena.ai", "Arena status."));
+        entries.add(AllowEntry.anyPath("trust.arena.ai", "Arena trust centre."));
         return Collections.unmodifiableList(entries);
     }
 
