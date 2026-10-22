@@ -59,8 +59,8 @@ public class TunnelPolicyTest {
         List<String> hosts = Arrays.asList(
                 "evil.example", "github.com.evil.example", "evilgithub.com", "github.com-evil.example",
                 "www.github.com.evil.example", "xn--rena-4qa.ai", "google.com", "google.co.il",
-                "mail.google.com", "accounts.google.com.evil.example", "www.googleapis.com",
-                "oauth2.googleapis.com", "gstatic.com", "recaptcha.net", "fonts.googleapis.com",
+                "mail.google.com", "accounts.google.com.evil.example",
+                "oauth2.googleapis.com", "gstatic.com", "recaptcha.net",
                 "github.githubassets.com.example", "github.com.localhost", "github.com.local");
         for (String host : hosts) {
             PolicyResult result = POLICY.evaluateTunnel(host, 443);

@@ -190,10 +190,12 @@ public class SourceInvariantsTest {
     @Test
     public void theAppNeverStartsAnotherActivity() throws Exception {
         String sources = allMainSources();
-        assertFalse("startActivity must never be delegated to the platform",
-                sources.contains("super.startActivity"));
-        assertFalse("no call sites may start an activity",
-                sources.contains(".startActivity(") || sources.contains(".startActivityForResult("));
+        assertFalse("general intents never leave the app", sources.contains("super.startActivity("));
+        assertEquals("only one platform picker launch is allowed", 1,
+                count(sources, "super.startActivityForResult("));
+        assertTrue("picker launch is guarded by an exact request code and in-flight flag",
+                sources.contains("filePickerLaunchInProgress") && sources.contains("isTrustedPickerIntent(intent)"));
+        assertFalse("no general platform activity starts", sources.contains(".startActivity("));
 
         String main = code("app/githubwebview/locked/MainActivity.java");
         assertTrue(main.contains("public void startActivity(Intent intent)"));
@@ -237,8 +239,10 @@ public class SourceInvariantsTest {
     public void chromeClientRefusesEscapes() throws Exception {
         String chrome = code("app/githubwebview/locked/web/GitHubWebChromeClient.java");
         assertTrue("the file picker must be intercepted", chrome.contains("onShowFileChooser"));
-        assertTrue("the file picker callback must be completed without a file",
+        assertTrue("unsupported requests must still cancel their callback",
                 chrome.contains("filePathCallback.onReceiveValue(null)"));
+        assertTrue("file selection requires a native upload handler",
+                chrome.contains("requestFileUpload(webView, filePathCallback, fileChooserParams)"));
         assertTrue("media capture must be denied", chrome.contains("request.deny()"));
         assertTrue("geolocation must be denied", chrome.contains("callback.invoke(origin, false, false)"));
         assertTrue("popups must be intercepted", chrome.contains("onCreateWindow"));

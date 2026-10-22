@@ -21,6 +21,19 @@
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="false">github.com</domain>
         <domain includeSubdomains="false">www.github.com</domain>
+        <domain includeSubdomains="false">drive.google.com</domain>
+        <domain includeSubdomains="false">arena.ai</domain>
+        <domain includeSubdomains="false">www.arena.ai</domain>
+        <domain includeSubdomains="false">auth.arena.ai</domain>
+        <domain includeSubdomains="false">cdn.arena.ai</domain>
+        <domain includeSubdomains="false">agent.arena.ai</domain>
+        <domain includeSubdomains="false">code.arena.ai</domain>
+        <domain includeSubdomains="false">indexable.arena.ai</domain>
+        <domain includeSubdomains="false">blog.arena.ai</domain>
+        <domain includeSubdomains="false">news.arena.ai</domain>
+        <domain includeSubdomains="false">help.arena.ai</domain>
+        <domain includeSubdomains="false">status.arena.ai</domain>
+        <domain includeSubdomains="false">trust.arena.ai</domain>
         <domain includeSubdomains="false">accounts.google.com</domain>
         <trust-anchors>
             <certificates src="system" />

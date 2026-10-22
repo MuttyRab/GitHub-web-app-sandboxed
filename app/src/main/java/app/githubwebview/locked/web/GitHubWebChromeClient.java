@@ -4,6 +4,8 @@ import android.content.Context;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
+import android.net.Uri;
+import android.webkit.ValueCallback;
 import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JsPromptResult;
@@ -39,6 +41,11 @@ public class GitHubWebChromeClient extends WebChromeClient {
 
     /** A page that opens more hidden windows than this is refused outright (memory/DoS guard). */
     private static final int MAX_LIVE_POPUPS = 3;
+
+    /** A native Activity is the only caller that may launch a user-approved document picker. */
+    public interface FileUploadHandler {
+        boolean requestFileUpload(WebView source, ValueCallback<Uri[]> callback, FileChooserParams params);
+    }
 
     private final Context context;
     private final GuardHost host;
@@ -217,13 +224,16 @@ public class GitHubWebChromeClient extends WebChromeClient {
     }
 
     /**
-     * The system file picker is refused: it launches another app (DocumentsUI/Camera) and would hand a
-     * local file to the WebView, both of which are outside this wrapper's contract. The callback must
-     * still be completed or the page's file input stays in a stuck "pending" state.
+     * User-selected file uploads may launch Android's document picker. Unsupported modes,
+     * untrusted pages and popup requests are refused as before.
      */
     @Override
-    public boolean onShowFileChooser(WebView webView, android.webkit.ValueCallback<android.net.Uri[]> filePathCallback,
+    public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
                                      FileChooserParams fileChooserParams) {
+        if (context instanceof FileUploadHandler
+                && ((FileUploadHandler) context).requestFileUpload(webView, filePathCallback, fileChooserParams)) {
+            return true;
+        }
         host.metrics().increment(PolicyMetrics.Counter.BLOCKED_FILE_CHOOSERS);
         host.onFileChooserBlocked();
         host.onMessage("File upload is disabled in this app");

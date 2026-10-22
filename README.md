@@ -1,10 +1,30 @@
-# GitHub WebView (Locked)
+# Arena + Approved Sites (Locked)
 
-An **unofficial GitHub adaptation of the existing Arena Android app**, not a new wrapper.
+This build starts on **https://arena.ai/** and allows the main Arena experience (including
+Arena's own Agent Mode UI), previously accessible GitHub pages, Google Drive and the existing
+Google account handoff. All non-approved device-side WebView destinations still fail closed.
+
+**Arena Agent Mode is operated by the Arena service.** Research and website requests executed on
+Arena's own servers do not pass through this APK's local network proxy. The APK cannot force
+Arena's agent to browse sites its service will not browse, and it cannot reliably differentiate
+arbitrary in-page JavaScript fetches from agent-initiated client fetches. There is **no global
+WebView internet exception**. The domain rules intentionally remain enforced for user navigation
+and device-originated resources.
+
+**File uploads:** Arena's existing HTML upload buttons can invoke Android's system
+`ACTION_OPEN_DOCUMENT` picker. Only an explicit request from the main WebView on an approved
+product origin can launch it, with up to 16 chosen documents returned to the page; camera and
+unsolicited intent launches remain denied. Selected files become accessible to the website
+after the user confirms them in the picker. Google Drive is an optional separately approved
+**visible website**, while Google Drive's Android document provider may also appear in the
+system picker. This has not been validated on a physical device.
+
+This fork was an **unofficial GitHub adaptation of the existing Arena Android app** and now
+restores Arena as its home page without removing its GitHub functionality.
 Source baseline: [Arena.ai-apk at 86008ec](https://github.com/markcollege2026-droid/Arena.ai-apk/tree/86008ec377e7dddf94f33c1b36a6eb8395cd867e), Arena 1.2.0.
 The verbatim import is commit `334f840` in this repository. The original repository and both main branches are unchanged.
 
-This session works only on `arena/d30b97e2-github-web-app-sandboxed`.
+The current changes are proposed on `feature/arena-agent-drive-uploads`; `main` is unchanged.
 The install ID is `app.githubwebview.locked` (version 1.0.0 / code 1), separate from
 `app.arenawebview.locked`; the two apps can coexist.
 
@@ -13,13 +33,14 @@ The install ID is `app.githubwebview.locked` (version 1.0.0 / code 1), separate 
 The original single Activity and WebView, dark native overlays, pull-to-refresh, back behavior,
 OAuth popup window, watchdog, renderer recovery, cookies, hardware rendering and `adjustResize`.
 The pure-Java URL parser and PRODUCT / ASSET / SIGN_IN roles, service-worker guard,
-CONNECT egress proxy with no direct fallback, TLS checks, escape/file-picker refusals, and the original
-refusal to hand anything to another app. Downloads are the one added capability: they are fetched and
+CONNECT egress proxy with no direct fallback, TLS checks, and escape refusals. The one narrowly
+allowed external activity is Android's system document picker for user-initiated uploads. Downloads: they are fetched and
 saved **by the app**, through that same proxy (see [Downloads](#downloads)).
 No dashboards, domain management, approval flows, extra settings, script injection or input CSS fixes.
 
-The start URL is `https://github.com/`. Only `github.com`, `www.github.com` and the approved
-`accounts.google.com` handoff may be visible pages. GitHub resources and CAPTCHA/identity widgets
+The start URL is `https://github.com/`. User navigation is limited to `github.com`,
+`www.github.com`, `drive.google.com` (Google Drive), and the existing
+`accounts.google.com` sign-in handoff. A native **Sites** button opens GitHub or Drive. GitHub resources and CAPTCHA/identity widgets
 have ASSET roles: **being fetchable does not make a host navigable**. All hosts are exact; HTTPS/443 only.
 
 ## Authentication and input
@@ -126,7 +147,8 @@ Refused by design: `blob:`/`data:` downloads (they would need a JavaScript bridg
 does not have), `http://`, any host not on the allow-list, and files over the cap. The app never opens
 the saved file: it is yours to open.
 
-Native file pickers stay disabled. Raw/archive links to resource-only hosts are
+User-selected file uploads now use the native Android document picker; no general file browsing,
+file:// navigation or camera permissions are added. Raw/archive links to resource-only hosts are
 blocked as pages. Uploaded attachments, external images not served through approved proxies,
 third-party SSO, GitHub Pages, Gist, Codespaces, Copilot and arbitrary external sites are not made
 browsable. In-page repository browsing, editing, commits, issues, PRs and Actions depend on the real
@@ -134,3 +156,24 @@ website and authentication; an allowlist is not proof these workflows have compl
 
 The proxy checks tunnel **host and port**, not encrypted paths, SNI or WebSocket messages.
 See [SECURITY.md](SECURITY.md) for the inherited security boundary and limitations.
+
+
+## Uploads, Google Drive, and agent networking
+
+The native **Sites** control exposes only GitHub and Google Drive. The WebView's file input
+can launch Android's explicit `ACTION_OPEN_DOCUMENT` picker, returning at most 16 selected
+`content://` URIs. No ambient storage access, camera, external browser, or JavaScript bridge
+is enabled. Google Drive support adds exact resource-only domains for APIs/preview assets.
+The Google Docs editor is *not* a permitted website.
+
+**Agent limitation:** This repository is only a GitHub/WebView browser. It contains no native
+agent runtime or controllable agent fetch service. WebView proxy tunnels cannot reliably tell
+a third-party agent's requests from web page scripts. Whitelisting arbitrary destinations
+there would let page scripts use them too, violating the retained user allowlist.
+Any future app-managed agent must use an independent authenticated network transport, with
+HTTPS-only public destinations, DNS-rebinding/loopback/private-address checks, scoped user
+consent for files, and request auditing. Remote AI agents running on GitHub's servers remain
+governed by GitHub's own permissions, not by this Android wrapper.
+
+Real-device validation remains necessary for Google sign-in, complete Drive rendering and
+picker-backed uploads; source-level checks alone do not prove live compatibility.

@@ -29,11 +29,24 @@ public class AllowlistRegressionTest {
 
     private static final List<String> EXPECTED_FIRST_PARTY_HOSTS = Arrays.asList(
             "github.com",
-            "www.github.com");
+            "www.github.com",
+            "drive.google.com",
+            "arena.ai",
+            "www.arena.ai",
+            "auth.arena.ai",
+            "cdn.arena.ai",
+            "agent.arena.ai",
+            "code.arena.ai",
+            "indexable.arena.ai",
+            "blog.arena.ai",
+            "news.arena.ai",
+            "help.arena.ai",
+            "status.arena.ai",
+            "trust.arena.ai");
 
     @Test
-    public void startPageIsGitHubCom() {
-        assertEquals("https://github.com/", GitHubAllowlist.PRIMARY_URL);
+    public void startPageIsArena() {
+        assertEquals("https://arena.ai/", GitHubAllowlist.PRIMARY_URL);
         assertTrue(GitHubAllowlist.productionConfig().evaluateNavigation(GitHubAllowlist.PRIMARY_URL)
                 .isAllowed());
     }
@@ -111,7 +124,9 @@ public class AllowlistRegressionTest {
                 "accounts.google.com", "accounts.youtube.com", "ssl.gstatic.com", "www.gstatic.com", "apis.google.com",
                 "fonts.gstatic.com", "lh3.googleusercontent.com", "www.google.com", "www.recaptcha.net",
                 "octocaptcha.com", "github-api.arkoselabs.com", "client-api.arkoselabs.com",
-                "static.captcha-delivery.com", "geo.captcha-delivery.com", "ct.captcha-delivery.com"));
+                "static.captcha-delivery.com", "geo.captcha-delivery.com", "ct.captcha-delivery.com",
+                "fonts.googleapis.com", "www.googleapis.com", "content.googleapis.com",
+                "clients6.google.com", "drive-thirdparty.googleusercontent.com", "ogs.google.com"));
         assertEquals("whole non-PRODUCT surface, including GitHub-owned resources",
                 expected, GitHubAllowlist.thirdPartyHosts());
         List<String> serviceHosts = new ArrayList<String>();
@@ -150,6 +165,13 @@ public class AllowlistRegressionTest {
         assertTrue(config.isSignInNavigation("https://accounts.google.com/signin/v2/identifier"));
         assertFalse(config.isSignInNavigation("https://github.com/"));
         assertTrue(config.isProductNavigation("https://github.com/markcollege2026-droid"));
+        assertTrue(config.isProductNavigation(GitHubAllowlist.DRIVE_URL));
+        assertTrue(config.isProductNavigation("https://arena.ai/agent"));
+        assertTrue(config.isProductNavigation("https://agent.arena.ai/"));
+        assertTrue(config.isProductNavigation(GitHubAllowlist.GITHUB_URL));
+        assertFalse(config.isProductNavigation("https://example.com/"));
+        assertFalse(config.evaluateNavigation("https://www.googleapis.com/drive/v3/files").isAllowed());
+        assertTrue(config.evaluateRequest("https://www.googleapis.com/drive/v3/files").isAllowed());
         assertFalse(config.isProductNavigation("https://accounts.google.com/signin"));
     }
 
@@ -176,7 +198,7 @@ public class AllowlistRegressionTest {
         List<String> deliberatelyUnrestricted = new ArrayList<String>(EXPECTED_SERVICE_HOSTS);
         deliberatelyUnrestricted.remove("images.ctfassets.net");
         deliberatelyUnrestricted.remove("videos.ctfassets.net");
-        deliberatelyUnrestricted.addAll(Arrays.asList("ssl.gstatic.com", "www.gstatic.com", "octocaptcha.com", "static.captcha-delivery.com", "ct.captcha-delivery.com"));
+        deliberatelyUnrestricted.addAll(Arrays.asList("ssl.gstatic.com", "www.gstatic.com", "octocaptcha.com", "static.captcha-delivery.com", "ct.captcha-delivery.com", "drive-thirdparty.googleusercontent.com"));
         for (AllowEntry entry : GitHubAllowlist.activeEntries()) {
             if (entry.isProduct() || entry.isSignIn() || entry.isPathRestricted()) {
                 continue;
@@ -305,7 +327,6 @@ public class AllowlistRegressionTest {
                 "productionresultssa20.blob.core.windows.net",
                 // Google hosts that are NOT part of the sign-in flow and must stay unreachable:
                 "mail.google.com",
-                "drive.google.com",
                 "docs.google.com",
                 "play.google.com",
                 "translate.google.com",
@@ -360,9 +381,9 @@ public class AllowlistRegressionTest {
     }
 
     @Test
-    public void arenaAndUnapprovedProductSitesAreNotReachableAsResourcesEither() {
+    public void unapprovedProductSitesAreNotReachableAsResourcesEither() {
         PolicyConfig config = GitHubAllowlist.productionConfig();
-        for (String host : Arrays.asList("arena.ai", "auth.arena.ai", "cdn.arena.ai", "gist.github.com",
+        for (String host : Arrays.asList("gist.github.com",
                 "example.github.io", "collector.github.com", "api.githubcopilot.com", "appleid.apple.com",
                 "company.okta.com", "alive-staging.github.com", "example.s3.amazonaws.com")) {
             assertFalse(host, config.evaluateNavigation("https://" + host + "/").isAllowed());
@@ -373,9 +394,25 @@ public class AllowlistRegressionTest {
     }
 
     @Test
+    public void arenaAgentCanRenderButWebViewCannotVisitArbitrarySites() {
+        PolicyConfig config = GitHubAllowlist.productionConfig();
+        assertTrue(config.evaluateNavigation("https://arena.ai/").isAllowed());
+        assertTrue(config.evaluateNavigation("https://arena.ai/agent").isAllowed());
+        assertTrue(config.evaluateNavigation("https://agent.arena.ai/session").isAllowed());
+        assertTrue(config.evaluateNavigation("https://github.com/").isAllowed());
+        assertTrue(config.evaluateNavigation("https://drive.google.com/drive/my-drive").isAllowed());
+        for (String host : Arrays.asList("example.com", "wikipedia.org", "docs.google.com",
+                "mail.google.com", "arena.ai.evil.example")) {
+            assertFalse("no new device network escape: " + host, config.evaluateNavigation("https://" + host + "/").isAllowed());
+            assertFalse("the WebView proxy must still block device requests: " + host,
+                    config.evaluateTunnel(host, 443).isAllowed());
+        }
+    }
+
+    @Test
     public void describeIsStableAndReadable() {
         String description = GitHubAllowlist.productionConfig().describe();
-        assertTrue(description.contains("start=https://github.com/"));
+        assertTrue(description.contains("start=https://arena.ai/"));
         for (String host : EXPECTED_FIRST_PARTY_HOSTS) {
             assertTrue("description must mention " + host, description.contains("allow " + host));
         }

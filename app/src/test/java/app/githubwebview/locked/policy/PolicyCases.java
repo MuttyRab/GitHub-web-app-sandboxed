@@ -51,6 +51,11 @@ public final class PolicyCases {
         // 1. What must keep working
         // ---------------------------------------------------------------------------------------
         both(cases, "start page", "https://github.com/", true, null);
+        both(cases, "Arena startup page", "https://arena.ai/", true, null);
+        both(cases, "Arena agent UI", "https://arena.ai/agent", true, null);
+        both(cases, "Arena subdomain endpoint", "https://agent.arena.ai/", true, null);
+        both(cases, "user-approved Google Drive", "https://drive.google.com/drive/u/0/my-drive", true, null);
+        both(cases, "Arena lookalike remains blocked", "https://arena.ai.evil.example/", false, BlockReason.HOST_NOT_ALLOWED);
         both(cases, "start page without trailing slash", "https://github.com", true, null);
         both(cases, "deep link inside the site", "https://github.com/octocat/Hello-World/blob/master/README", true, null);
         both(cases, "query string", "https://github.com/search?q=hello%20world", true, null);
@@ -124,7 +129,7 @@ public final class PolicyCases {
             doc(cases, host + " never a top-level page", resource, false, BlockReason.DOCUMENT_NOT_ALLOWED);
         }
         for (String host : new String[]{"docs.github.com", "gist.github.com", "example.github.io",
-                "collector.github.com", "api.githubcopilot.com", "arena.ai", "example.s3.amazonaws.com",
+                "collector.github.com", "api.githubcopilot.com", "example.s3.amazonaws.com",
                 "example.blob.core.windows.net", "appleid.apple.com", "company.okta.com"}) {
             both(cases, "unapproved destination " + host, "https://" + host + "/", false, BlockReason.HOST_NOT_ALLOWED);
         }
@@ -382,8 +387,8 @@ public final class PolicyCases {
                 false, BlockReason.PATH_NOT_ALLOWED);
         both(cases, "Gmail stays unreachable", "https://mail.google.com/mail/u/0/",
                 false, BlockReason.HOST_NOT_ALLOWED);
-        both(cases, "Google Drive stays unreachable", "https://drive.google.com/drive/my-drive",
-                false, BlockReason.HOST_NOT_ALLOWED);
+        both(cases, "Google Drive is approved", "https://drive.google.com/drive/my-drive",
+                true, null);
         both(cases, "Google Play stays unreachable", "https://play.google.com/store/apps",
                 false, BlockReason.HOST_NOT_ALLOWED);
         both(cases, "the account host is reachable at every path the flow uses",
@@ -445,8 +450,8 @@ public final class PolicyCases {
                 true, null);
         sub(cases, "blob minted by the sign-in window", "blob:https://accounts.google.com/1a2b3c4d",
                 true, null);
-        sub(cases, "blob of a Google host that is not on the list", "blob:https://www.googleapis.com/1a2b3c4d",
-                false, BlockReason.HOST_NOT_ALLOWED);
+        sub(cases, "blob from a Drive resource origin", "blob:https://www.googleapis.com/1a2b3c4d",
+                true, null);
         sub(cases, "blob of a look-alike of a widget host", "blob:https://www.google.com.evil.example/1a2b3c4d",
                 false, BlockReason.HOST_NOT_ALLOWED);
         doc(cases, "a blob is never a page, whatever its origin", "blob:https://www.google.com/1a2b3c4d",

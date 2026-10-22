@@ -52,9 +52,9 @@
       "upstreamFileSha256": "32a625997c40054079b95a4d4533656d0edaecbe52d62e90570a18f08fbd2921",
       "adaptedCodeSha256": "f54811715ebe52aafae1b026872bc7a05fd2aa2ea8e10ebc67adffed2f8e350f",
       "reviewedException": {
-        "summary": "Downloads are saved by the app (progress dialog, saved/failed/cancelled/refused reporting), a refused destination is reported as a refusal with its host and reason, and a click that lands on a file-only host offers to save it instead of doing nothing.",
-        "rationale": "Three user reports in one change: Help/Docs links surfaced as 'github.com could not be reached', downloads did nothing, and 'Download raw file' produced no outcome because the file is served inline by an asset host. The refusal wording is now accurate, the activity owns the one FileDownloads instance whose callbacks drive the native surfaces, and an inline file link asks whether to save. No allow-list entry, verdict, permission or loadUrl path changes.",
-        "adaptedCodeSha256": "e163550dc2ab4737cb4b72158c99756eb5dfca39a6ed9bd65b533d723ecee74d",
+        "summary": "Explicit Arena/GitHub/Drive switcher, startup and error wording plus authenticated file chooser, downloads and refusal UI",
+        "rationale": "Three user reports in one change: Help/Docs links surfaced as 'github.com could not be reached', downloads did nothing, and 'Download raw file' produced no outcome because the file is served inline by an asset host. The refusal wording is now accurate, the activity owns the one FileDownloads instance whose callbacks drive the native surfaces, and an inline file link asks whether to save. No allow-list entry, verdict, permission or loadUrl path changes. Additional explicit user-requested exceptions: a file chooser launches only ACTION_OPEN_DOCUMENT via an exact in-flight intent check and returns user-selected content URIs; Google Drive is one new configured destination via the already verified loading path. Follow-up: restored the original Arena product hosts and changed startup to Arena, retained GitHub and Drive, and routed both Android startActivityForResult overloads through the same exact picker authorization check.",
+        "adaptedCodeSha256": "dbac2f20ccee5296ddb1d77a2775bf3782fa739cd875db8e269f81e37b03044c",
         "requiredTokens": [
           "verdict",
           "FileDownloads",
@@ -63,7 +63,13 @@
           "\"Download refused: nothing was saved\"",
           "\"Download cancelled: nothing was saved\"",
           "offerToSaveInstead",
-          "\"Save this file?\""
+          "\"Save this file?\"",
+          "FILE_PICKER_REQUEST_CODE",
+          "requestFileUpload",
+          "isTrustedPickerIntent",
+          "addSiteSwitcher",
+          "DRIVE_URL",
+          "DocumentsContract"
         ],
         "forbiddenTokens": [
           "\"Downloads are disabled in this app\""
@@ -128,7 +134,19 @@
     "app/src/main/java/app/githubwebview/locked/web/GitHubWebChromeClient.java": {
       "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/ArenaWebChromeClient.java",
       "upstreamFileSha256": "3c9ece45926ad755e4bf953d9586fb51ac8c2852c77569a1d148f0b7cd4e7b89",
-      "adaptedCodeSha256": "9dc992b4f2b633f5288689af1af72d011492d9b9c868e8b14f70bae71e125f16"
+      "adaptedCodeSha256": "9dc992b4f2b633f5288689af1af72d011492d9b9c868e8b14f70bae71e125f16",
+      "reviewedException": {
+        "summary": "Allow a deliberate user-selected file upload via Activity handler while rejecting unsupported pickers.",
+        "rationale": "The prior implementation always cancelled WebChromeClient file inputs. The new handler delegates only to MainActivity, which validates the visible page and launches the system document picker under a one-shot request code; all unsupported attempts still fail closed.",
+        "adaptedCodeSha256": "32c591483f699469d27cd91b3248a62c1ef55960b5f9ae433754758a4871d319",
+        "requiredTokens": [
+          "FileUploadHandler",
+          "requestFileUpload",
+          "onShowFileChooser",
+          "onReceiveValue"
+        ],
+        "forbiddenTokens": []
+      }
     },
     "app/src/main/java/app/githubwebview/locked/web/GitHubWebViewClient.java": {
       "upstreamPath": "app/src/main/java/app/arenawebview/locked/web/ArenaWebViewClient.java",
