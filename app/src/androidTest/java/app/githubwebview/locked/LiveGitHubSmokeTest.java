@@ -20,6 +20,7 @@ public class LiveGitHubSmokeTest {
     @Test
     public void loadsTheRealSiteAndRunsItsJavaScript() throws Exception {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            LivePageSupport.load(scenario, "https://github.com/"); // Explicit: Arena is now the default.
             assertTrue("real GitHub homepage must render, not just accept a requested URL",
                     LivePageSupport.waitFor(scenario,
                             "location.hostname==='github.com' && document.readyState==='complete'"
