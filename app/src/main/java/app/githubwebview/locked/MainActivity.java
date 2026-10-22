@@ -60,7 +60,7 @@ import app.githubwebview.locked.web.GuardHost;
 import app.githubwebview.locked.web.WebViewHardening;
 
 /**
- * The whole app: one WebView showing github.com, and the guards that keep it there.
+ * The whole app: one WebView starting at Arena, with only approved navigation hosts.
  *
  * <p>Invariants this class maintains (also asserted by the tests):</p>
  * <ul>
@@ -299,7 +299,7 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     private void addSiteSwitcher() {
         final TextView sites = new TextView(this);
         sites.setText("Sites");
-        sites.setContentDescription("Open GitHub or Google Drive");
+        sites.setContentDescription("Open Arena, GitHub or Google Drive");
         sites.setTextColor(Color.WHITE);
         sites.setTextSize(13);
         sites.setGravity(Gravity.CENTER);
@@ -311,9 +311,11 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
         sites.setElevation(8 * getResources().getDisplayMetrics().density);
         sites.setOnClickListener(v -> new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Open allowed site")
-                .setItems(new String[] {"GitHub", "Google Drive"}, (dialog, choice) ->
-                        loadVerifiedDestination(choice == 0
-                                ? GitHubAllowlist.PRIMARY_URL : GitHubAllowlist.DRIVE_URL, "site-switcher"))
+                .setItems(new String[] {"Arena", "GitHub", "Google Drive"}, (dialog, choice) ->
+                        loadVerifiedDestination(new String[] {
+                                GitHubAllowlist.PRIMARY_URL, GitHubAllowlist.GITHUB_URL,
+                                GitHubAllowlist.DRIVE_URL
+                        }[choice], "site-switcher"))
                 .show());
         float density = getResources().getDisplayMetrics().density;
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
@@ -738,7 +740,7 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     public void startActivityForResult(Intent intent, int requestCode) {
         if (filePickerLaunchInProgress && requestCode == FILE_PICKER_REQUEST_CODE
                 && isTrustedPickerIntent(intent)) {
-            super.startActivityForResult(intent, requestCode, null);
+            startActivityForResult(intent, requestCode, null);
             return;
         }
         blockExternalIntent(intent);
@@ -747,6 +749,12 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     @Override
     @SuppressWarnings("deprecation")
     public void startActivityForResult(Intent intent, int requestCode, Bundle options) {
+        // The two-arg overload delegates here; no other platform activity launch is permitted.
+        if (filePickerLaunchInProgress && requestCode == FILE_PICKER_REQUEST_CODE
+                && isTrustedPickerIntent(intent)) {
+            super.startActivityForResult(intent, requestCode, options);
+            return;
+        }
         blockExternalIntent(intent);
     }
 
@@ -923,7 +931,7 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
             onMessage("Blocked " + describeDestination(url, verdict));
             return;
         }
-        overlay.showError("github.com could not be reached (" + description + ").\n\n"
+        overlay.showError("The allowed website could not be reached (" + description + ").\n\n"
                 + "Check the network connection and try again, or copy the diagnostics report.");
     }
 
