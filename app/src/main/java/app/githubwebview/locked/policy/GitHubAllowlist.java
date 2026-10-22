@@ -26,6 +26,7 @@ public final class GitHubAllowlist {
 
     /** The only page the app ever opens on its own. */
     public static final String PRIMARY_URL = "https://github.com/";
+    public static final String DRIVE_URL = "https://drive.google.com/drive/u/0/my-drive";
 
     /** Exact end-point of every redirect that the wrapper follows back into the app. */
     public static final List<String> FIRST_PARTY_HOSTS;
@@ -82,6 +83,7 @@ public final class GitHubAllowlist {
         if (ENABLE_CAPTCHA_WIDGETS) {
             groups.add(captchaEntries());
         }
+        groups.add(driveAssetEntries());
         entries.addAll(merge(groups));
         return Collections.unmodifiableList(entries);
     }
@@ -95,6 +97,8 @@ public final class GitHubAllowlist {
         entries.add(AllowEntry.anyPath("github.com", "The product itself (canonical host)."));
         entries.add(AllowEntry.anyPath("www.github.com",
                 "Canonical alternate host for the same site (redirects to github.com)."));
+        entries.add(AllowEntry.anyPath("drive.google.com",
+                "User-selectable Google Drive website; exact host only."));
         return Collections.unmodifiableList(entries);
     }
 
@@ -242,6 +246,26 @@ public final class GitHubAllowlist {
                 "Web font files used by Google's pages (cosmetic only)."));
         entries.add(AllowEntry.resourceOnly("lh3.googleusercontent.com", Collections.singletonList("/a/"),
                 "Account avatars shown by Google's account chooser (images only)."));
+        return Collections.unmodifiableList(entries);
+    }
+
+    /** Google Drive supporting endpoints: asset/API requests, never user-browsable pages. */
+    public static List<AllowEntry> driveAssetEntries() {
+        List<AllowEntry> entries = new ArrayList<AllowEntry>();
+        entries.add(AllowEntry.resourceOnly("fonts.googleapis.com", paths("/css", "/css2"),
+                "Drive UI stylesheets."));
+        entries.add(AllowEntry.resourceOnly("www.googleapis.com", paths("/drive/", "/upload/", "/batch/"),
+                "Google Drive API requests and uploads; resources only."));
+        entries.add(AllowEntry.resourceOnly("content.googleapis.com", paths("/drive/", "/batch/"),
+                "Drive API responses; resources only."));
+        entries.add(AllowEntry.resourceOnly("clients6.google.com", paths("/drive/", "/batch/"),
+                "Drive client API requests; resources only."));
+        entries.add(AllowEntry.resourceOnly("drive-thirdparty.googleusercontent.com",
+                Collections.<String>emptyList(), "Drive content/preview assets, never a page."));
+        entries.add(AllowEntry.resourceOnly("ogs.google.com", paths("/_/"),
+                "Google navigation widget resources."));
+        entries.add(AllowEntry.resourceOnly("lh3.googleusercontent.com", paths("/d/", "/p/"),
+                "Drive thumbnails, alongside the previously permitted sign-in avatar paths."));
         return Collections.unmodifiableList(entries);
     }
 
