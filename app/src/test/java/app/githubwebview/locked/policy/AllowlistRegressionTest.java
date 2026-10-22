@@ -381,9 +381,9 @@ public class AllowlistRegressionTest {
     }
 
     @Test
-    public void arenaAndUnapprovedProductSitesAreNotReachableAsResourcesEither() {
+    public void unapprovedProductSitesAreNotReachableAsResourcesEither() {
         PolicyConfig config = GitHubAllowlist.productionConfig();
-        for (String host : Arrays.asList("arena.ai", "auth.arena.ai", "cdn.arena.ai", "gist.github.com",
+        for (String host : Arrays.asList("gist.github.com",
                 "example.github.io", "collector.github.com", "api.githubcopilot.com", "appleid.apple.com",
                 "company.okta.com", "alive-staging.github.com", "example.s3.amazonaws.com")) {
             assertFalse(host, config.evaluateNavigation("https://" + host + "/").isAllowed());
@@ -394,9 +394,25 @@ public class AllowlistRegressionTest {
     }
 
     @Test
+    public void arenaAgentCanRenderButWebViewCannotVisitArbitrarySites() {
+        PolicyConfig config = GitHubAllowlist.productionConfig();
+        assertTrue(config.evaluateNavigation("https://arena.ai/").isAllowed());
+        assertTrue(config.evaluateNavigation("https://arena.ai/agent").isAllowed());
+        assertTrue(config.evaluateNavigation("https://agent.arena.ai/session").isAllowed());
+        assertTrue(config.evaluateNavigation("https://github.com/").isAllowed());
+        assertTrue(config.evaluateNavigation("https://drive.google.com/drive/my-drive").isAllowed());
+        for (String host : Arrays.asList("example.com", "wikipedia.org", "docs.google.com",
+                "mail.google.com", "arena.ai.evil.example")) {
+            assertFalse("no new device network escape: " + host, config.evaluateNavigation("https://" + host + "/").isAllowed());
+            assertFalse("the WebView proxy must still block device requests: " + host,
+                    config.evaluateTunnel(host, 443).isAllowed());
+        }
+    }
+
+    @Test
     public void describeIsStableAndReadable() {
         String description = GitHubAllowlist.productionConfig().describe();
-        assertTrue(description.contains("start=https://github.com/"));
+        assertTrue(description.contains("start=https://arena.ai/"));
         for (String host : EXPECTED_FIRST_PARTY_HOSTS) {
             assertTrue("description must mention " + host, description.contains("allow " + host));
         }
