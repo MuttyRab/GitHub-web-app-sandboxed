@@ -735,7 +735,7 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     public void startActivityForResult(Intent intent, int requestCode) {
         if (filePickerLaunchInProgress && requestCode == FILE_PICKER_REQUEST_CODE
                 && isTrustedPickerIntent(intent)) {
-            super.startActivityForResult(intent, requestCode);
+            super.startActivityForResult(intent, requestCode, null);
             return;
         }
         blockExternalIntent(intent);
