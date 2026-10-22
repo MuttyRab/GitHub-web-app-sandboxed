@@ -21,6 +21,7 @@
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="false">github.com</domain>
         <domain includeSubdomains="false">www.github.com</domain>
+        <domain includeSubdomains="false">drive.google.com</domain>
         <domain includeSubdomains="false">accounts.google.com</domain>
         <trust-anchors>
             <certificates src="system" />

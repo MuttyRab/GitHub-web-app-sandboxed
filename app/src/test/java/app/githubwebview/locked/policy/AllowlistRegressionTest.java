@@ -29,7 +29,8 @@ public class AllowlistRegressionTest {
 
     private static final List<String> EXPECTED_FIRST_PARTY_HOSTS = Arrays.asList(
             "github.com",
-            "www.github.com");
+            "www.github.com",
+            "drive.google.com");
 
     @Test
     public void startPageIsGitHubCom() {
@@ -111,7 +112,9 @@ public class AllowlistRegressionTest {
                 "accounts.google.com", "accounts.youtube.com", "ssl.gstatic.com", "www.gstatic.com", "apis.google.com",
                 "fonts.gstatic.com", "lh3.googleusercontent.com", "www.google.com", "www.recaptcha.net",
                 "octocaptcha.com", "github-api.arkoselabs.com", "client-api.arkoselabs.com",
-                "static.captcha-delivery.com", "geo.captcha-delivery.com", "ct.captcha-delivery.com"));
+                "static.captcha-delivery.com", "geo.captcha-delivery.com", "ct.captcha-delivery.com",
+                "fonts.googleapis.com", "www.googleapis.com", "content.googleapis.com",
+                "clients6.google.com", "drive-thirdparty.googleusercontent.com", "ogs.google.com"));
         assertEquals("whole non-PRODUCT surface, including GitHub-owned resources",
                 expected, GitHubAllowlist.thirdPartyHosts());
         List<String> serviceHosts = new ArrayList<String>();
@@ -150,6 +153,9 @@ public class AllowlistRegressionTest {
         assertTrue(config.isSignInNavigation("https://accounts.google.com/signin/v2/identifier"));
         assertFalse(config.isSignInNavigation("https://github.com/"));
         assertTrue(config.isProductNavigation("https://github.com/markcollege2026-droid"));
+        assertTrue(config.isProductNavigation(GitHubAllowlist.DRIVE_URL));
+        assertFalse(config.evaluateNavigation("https://www.googleapis.com/drive/v3/files").isAllowed());
+        assertTrue(config.evaluateRequest("https://www.googleapis.com/drive/v3/files").isAllowed());
         assertFalse(config.isProductNavigation("https://accounts.google.com/signin"));
     }
 
@@ -176,7 +182,7 @@ public class AllowlistRegressionTest {
         List<String> deliberatelyUnrestricted = new ArrayList<String>(EXPECTED_SERVICE_HOSTS);
         deliberatelyUnrestricted.remove("images.ctfassets.net");
         deliberatelyUnrestricted.remove("videos.ctfassets.net");
-        deliberatelyUnrestricted.addAll(Arrays.asList("ssl.gstatic.com", "www.gstatic.com", "octocaptcha.com", "static.captcha-delivery.com", "ct.captcha-delivery.com"));
+        deliberatelyUnrestricted.addAll(Arrays.asList("ssl.gstatic.com", "www.gstatic.com", "octocaptcha.com", "static.captcha-delivery.com", "ct.captcha-delivery.com", "drive-thirdparty.googleusercontent.com"));
         for (AllowEntry entry : GitHubAllowlist.activeEntries()) {
             if (entry.isProduct() || entry.isSignIn() || entry.isPathRestricted()) {
                 continue;
@@ -305,7 +311,6 @@ public class AllowlistRegressionTest {
                 "productionresultssa20.blob.core.windows.net",
                 // Google hosts that are NOT part of the sign-in flow and must stay unreachable:
                 "mail.google.com",
-                "drive.google.com",
                 "docs.google.com",
                 "play.google.com",
                 "translate.google.com",

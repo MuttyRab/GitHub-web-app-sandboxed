@@ -35,3 +35,16 @@ used. Unlisted services fail closed; dynamic regional Actions hosts may require 
 
 The committed demo signing key is public. For a private deployment supply your own signing key via
 existing CI secrets; never treat the demo key as proof a downloaded APK was produced by this project.
+
+
+## User-selected uploads and Google Drive
+
+The *only* external Activity exception is a document-picker `ACTION_OPEN_DOCUMENT`
+request, guarded by its exact request code and in-flight flag. Only `content://` URI
+results from explicit user selection are passed back to the website; unapproved intents
+and `file://` navigation remain blocked. Google Drive is added as a navigable host,
+and Google Drive API and thumbnail endpoints are added as exact asset-only entries.
+
+This APK has no native agent principal and does not weaken WebView CONNECT restrictions to
+provide universal agent access; a general HTTPS proxy exception for scripts would compromise
+the user-facing allowlist.

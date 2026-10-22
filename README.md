@@ -18,8 +18,9 @@ refusal to hand anything to another app. Downloads are the one added capability:
 saved **by the app**, through that same proxy (see [Downloads](#downloads)).
 No dashboards, domain management, approval flows, extra settings, script injection or input CSS fixes.
 
-The start URL is `https://github.com/`. Only `github.com`, `www.github.com` and the approved
-`accounts.google.com` handoff may be visible pages. GitHub resources and CAPTCHA/identity widgets
+The start URL is `https://github.com/`. User navigation is limited to `github.com`,
+`www.github.com`, `drive.google.com` (Google Drive), and the existing
+`accounts.google.com` sign-in handoff. A native **Sites** button opens GitHub or Drive. GitHub resources and CAPTCHA/identity widgets
 have ASSET roles: **being fetchable does not make a host navigable**. All hosts are exact; HTTPS/443 only.
 
 ## Authentication and input
@@ -126,7 +127,8 @@ Refused by design: `blob:`/`data:` downloads (they would need a JavaScript bridg
 does not have), `http://`, any host not on the allow-list, and files over the cap. The app never opens
 the saved file: it is yours to open.
 
-Native file pickers stay disabled. Raw/archive links to resource-only hosts are
+User-selected file uploads now use the native Android document picker; no general file browsing,
+file:// navigation or camera permissions are added. Raw/archive links to resource-only hosts are
 blocked as pages. Uploaded attachments, external images not served through approved proxies,
 third-party SSO, GitHub Pages, Gist, Codespaces, Copilot and arbitrary external sites are not made
 browsable. In-page repository browsing, editing, commits, issues, PRs and Actions depend on the real
@@ -134,3 +136,24 @@ website and authentication; an allowlist is not proof these workflows have compl
 
 The proxy checks tunnel **host and port**, not encrypted paths, SNI or WebSocket messages.
 See [SECURITY.md](SECURITY.md) for the inherited security boundary and limitations.
+
+
+## Uploads, Google Drive, and agent networking
+
+The native **Sites** control exposes only GitHub and Google Drive. The WebView's file input
+can launch Android's explicit `ACTION_OPEN_DOCUMENT` picker, returning at most 16 selected
+`content://` URIs. No ambient storage access, camera, external browser, or JavaScript bridge
+is enabled. Google Drive support adds exact resource-only domains for APIs/preview assets.
+The Google Docs editor is *not* a permitted website.
+
+**Agent limitation:** This repository is only a GitHub/WebView browser. It contains no native
+agent runtime or controllable agent fetch service. WebView proxy tunnels cannot reliably tell
+a third-party agent's requests from web page scripts. Whitelisting arbitrary destinations
+there would let page scripts use them too, violating the retained user allowlist.
+Any future app-managed agent must use an independent authenticated network transport, with
+HTTPS-only public destinations, DNS-rebinding/loopback/private-address checks, scoped user
+consent for files, and request auditing. Remote AI agents running on GitHub's servers remain
+governed by GitHub's own permissions, not by this Android wrapper.
+
+Real-device validation remains necessary for Google sign-in, complete Drive rendering and
+picker-backed uploads; source-level checks alone do not prove live compatibility.
