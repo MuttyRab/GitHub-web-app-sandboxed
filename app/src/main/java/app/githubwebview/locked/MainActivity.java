@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -700,7 +701,9 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
             }
             boolean safe = !uris.isEmpty() && uris.size() <= MAX_UPLOAD_FILES;
             for (Uri uri : uris) {
-                if (uri == null || !"content".equals(uri.getScheme()) || uri.getAuthority() == null) {
+                if (uri == null || !"content".equals(uri.getScheme()) || uri.getAuthority() == null
+                        || getPackageName().equals(uri.getAuthority())
+                        || !DocumentsContract.isDocumentUri(this, uri)) {
                     safe = false;
                     break;
                 }
