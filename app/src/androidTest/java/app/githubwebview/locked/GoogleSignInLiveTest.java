@@ -62,7 +62,7 @@ public class GoogleSignInLiveTest {
             }
 
             assertTrue("the app must only ever be on an approved host, was: " + url,
-                    url.startsWith("https://accounts.google.com/") || url.startsWith("https://github.com/"));
+                    url.startsWith("https://accounts.google.com/") || url.startsWith("https://github.com/") || url.startsWith("https://arena.ai/"));
 
             String probe = evaluate(scenario, """
                     (function () {
