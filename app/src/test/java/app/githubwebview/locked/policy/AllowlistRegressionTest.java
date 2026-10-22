@@ -30,11 +30,23 @@ public class AllowlistRegressionTest {
     private static final List<String> EXPECTED_FIRST_PARTY_HOSTS = Arrays.asList(
             "github.com",
             "www.github.com",
-            "drive.google.com");
+            "drive.google.com",
+            "arena.ai",
+            "www.arena.ai",
+            "auth.arena.ai",
+            "cdn.arena.ai",
+            "agent.arena.ai",
+            "code.arena.ai",
+            "indexable.arena.ai",
+            "blog.arena.ai",
+            "news.arena.ai",
+            "help.arena.ai",
+            "status.arena.ai",
+            "trust.arena.ai");
 
     @Test
-    public void startPageIsGitHubCom() {
-        assertEquals("https://github.com/", GitHubAllowlist.PRIMARY_URL);
+    public void startPageIsArena() {
+        assertEquals("https://arena.ai/", GitHubAllowlist.PRIMARY_URL);
         assertTrue(GitHubAllowlist.productionConfig().evaluateNavigation(GitHubAllowlist.PRIMARY_URL)
                 .isAllowed());
     }
@@ -154,6 +166,10 @@ public class AllowlistRegressionTest {
         assertFalse(config.isSignInNavigation("https://github.com/"));
         assertTrue(config.isProductNavigation("https://github.com/markcollege2026-droid"));
         assertTrue(config.isProductNavigation(GitHubAllowlist.DRIVE_URL));
+        assertTrue(config.isProductNavigation("https://arena.ai/agent"));
+        assertTrue(config.isProductNavigation("https://agent.arena.ai/"));
+        assertTrue(config.isProductNavigation(GitHubAllowlist.GITHUB_URL));
+        assertFalse(config.isProductNavigation("https://example.com/"));
         assertFalse(config.evaluateNavigation("https://www.googleapis.com/drive/v3/files").isAllowed());
         assertTrue(config.evaluateRequest("https://www.googleapis.com/drive/v3/files").isAllowed());
         assertFalse(config.isProductNavigation("https://accounts.google.com/signin"));
