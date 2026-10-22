@@ -13,8 +13,8 @@ The install ID is `app.githubwebview.locked` (version 1.0.0 / code 1), separate 
 The original single Activity and WebView, dark native overlays, pull-to-refresh, back behavior,
 OAuth popup window, watchdog, renderer recovery, cookies, hardware rendering and `adjustResize`.
 The pure-Java URL parser and PRODUCT / ASSET / SIGN_IN roles, service-worker guard,
-CONNECT egress proxy with no direct fallback, TLS checks, escape/file-picker refusals, and the original
-refusal to hand anything to another app. Downloads are the one added capability: they are fetched and
+CONNECT egress proxy with no direct fallback, TLS checks, and escape refusals. The one narrowly
+allowed external activity is Android's system document picker for user-initiated uploads. Downloads: they are fetched and
 saved **by the app**, through that same proxy (see [Downloads](#downloads)).
 No dashboards, domain management, approval flows, extra settings, script injection or input CSS fixes.
 
