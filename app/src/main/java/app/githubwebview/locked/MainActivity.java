@@ -6,6 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -15,6 +16,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.text.InputType;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +31,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebHistoryItem;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.ValueCallback;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -37,6 +40,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 
 import app.githubwebview.locked.net.FileDownloads;
 import app.githubwebview.locked.policy.GitHubAllowlist;
@@ -77,7 +82,8 @@ import app.githubwebview.locked.web.WebViewHardening;
  *       and otherwise asks for a second press before closing.</li>
  * </ul>
  */
-public class MainActivity extends Activity implements GuardHost, FileDownloads.Listener {
+public class MainActivity extends Activity implements GuardHost, FileDownloads.Listener,
+        GitHubWebChromeClient.FileUploadHandler {
 
     private static final String TAG = "GitHubWebViewLocked";
 
@@ -92,6 +98,8 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     private static final long REFRESH_SPINNER_TIMEOUT_MS = 20_000L;
     private static final long EXIT_BACK_WINDOW_MS = 2500L;
     private static final long MESSAGE_THROTTLE_MS = 900L;
+    private static final int FILE_PICKER_REQUEST_CODE = 0x4710;
+    private static final int MAX_UPLOAD_FILES = 16;
 
     private final PolicyConfig policy = GitHubAllowlist.productionConfig();
     private final PolicyMetrics metrics = PolicyMetrics.get();
@@ -135,6 +143,8 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     private AlertDialog downloadDialog;
     private ProgressBar downloadProgressBar;
     private TextView downloadProgressText;
+    private ValueCallback<Uri[]> pendingFileUpload;
+    private boolean filePickerLaunchInProgress;
 
     private long lastExitBackPressMs;
     private long lastMessageMs;
@@ -168,6 +178,7 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
         root.addView(pullToRefresh, 0, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         attachPrimaryWebView();
+        addSiteSwitcher();
 
         overlay = new StatusOverlay(this, new StatusOverlay.Listener() {
             @Override
@@ -280,6 +291,35 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
         webView.setId(R.id.github_webview);
         pullToRefresh.addView(webView, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+
+    /** Native switcher: no arbitrary URL entry, and all loads still pass the allowlist. */
+    private void addSiteSwitcher() {
+        final TextView sites = new TextView(this);
+        sites.setText("Sites");
+        sites.setContentDescription("Open GitHub or Google Drive");
+        sites.setTextColor(Color.WHITE);
+        sites.setTextSize(13);
+        sites.setGravity(Gravity.CENTER);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(0xE5222730);
+        bg.setCornerRadius(24 * getResources().getDisplayMetrics().density);
+        bg.setStroke(Math.max(1, (int) getResources().getDisplayMetrics().density), 0xFF707985);
+        sites.setBackground(bg);
+        sites.setElevation(8 * getResources().getDisplayMetrics().density);
+        sites.setOnClickListener(v -> new AlertDialog.Builder(MainActivity.this)
+                .setTitle("Open allowed site")
+                .setItems(new String[] {"GitHub", "Google Drive"}, (dialog, choice) ->
+                        loadVerifiedDestination(choice == 0
+                                ? GitHubAllowlist.PRIMARY_URL : GitHubAllowlist.DRIVE_URL, "site-switcher"))
+                .show());
+        float density = getResources().getDisplayMetrics().density;
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                (int) (64 * density), (int) (36 * density), Gravity.TOP | Gravity.END);
+        params.topMargin = (int) (10 * density);
+        params.rightMargin = (int) (10 * density);
+        root.addView(sites, params);
     }
 
     /**
@@ -458,6 +498,7 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
             downloads.shutdown();
         }
         closeSignInWindow("destroy");
+        completeFileUpload(null);
         if (chromeClient != null) {
             chromeClient.destroyPopups();
         }
@@ -574,8 +615,109 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
         onMessage("Press back again to close");
     }
 
+
     // ---------------------------------------------------------------------------------------------
-    // Escape prevention: this app never starts another activity
+    // User-selected file uploads: only the system document picker can launch outside the Activity
+    // ---------------------------------------------------------------------------------------------
+
+    @Override
+    public boolean requestFileUpload(WebView source, ValueCallback<Uri[]> callback,
+                                     WebChromeClient.FileChooserParams params) {
+        if (source == null || source != webView || callback == null || params == null
+                || pendingFileUpload != null || !EgressGuard.isReady()) {
+            return false;
+        }
+        PolicyResult page = policy.evaluateNavigation(source.getUrl());
+        if (!page.isAllowed() || page.matchedEntry() == null || !page.matchedEntry().isProduct()) {
+            return false;
+        }
+        int mode = params.getMode();
+        if (mode != WebChromeClient.FileChooserParams.MODE_OPEN
+                && mode != WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
+            return false;
+        }
+        Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        picker.addCategory(Intent.CATEGORY_OPENABLE);
+        picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        picker.setType("*/*");
+        picker.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
+        String[] requested = params.getAcceptTypes();
+        List<String> mimeTypes = new ArrayList<String>();
+        if (requested != null) {
+            for (String raw : requested) {
+                if (raw == null) continue;
+                for (String candidate : raw.split(",")) {
+                    String mime = candidate.trim().toLowerCase(Locale.ROOT);
+                    if (mime.length() <= 100 && mime.contains("/") && !mime.contains(" ")
+                            && !mimeTypes.contains(mime)) {
+                        mimeTypes.add(mime);
+                    }
+                }
+            }
+        }
+        if (mimeTypes.size() == 1) {
+            picker.setType(mimeTypes.get(0));
+        } else if (!mimeTypes.isEmpty()) {
+            picker.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toArray(new String[0]));
+        }
+        pendingFileUpload = callback;
+        try {
+            filePickerLaunchInProgress = true;
+            startActivityForResult(picker, FILE_PICKER_REQUEST_CODE);
+        } catch (ActivityNotFoundException | SecurityException e) {
+            completeFileUpload(null);
+            onMessage("No system file picker is available");
+        } finally {
+            filePickerLaunchInProgress = false;
+        }
+        return true;
+    }
+
+    private static boolean isTrustedPickerIntent(Intent intent) {
+        return intent != null && Intent.ACTION_OPEN_DOCUMENT.equals(intent.getAction())
+                && intent.hasCategory(Intent.CATEGORY_OPENABLE)
+                && intent.getData() == null && intent.getComponent() == null
+                && intent.hasExtra(Intent.EXTRA_ALLOW_MULTIPLE);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != FILE_PICKER_REQUEST_CODE) return;
+        Uri[] selected = null;
+        if (resultCode == RESULT_OK && data != null) {
+            List<Uri> uris = new ArrayList<Uri>();
+            ClipData clips = data.getClipData();
+            if (clips != null) {
+                for (int i = 0; i < clips.getItemCount() && i <= MAX_UPLOAD_FILES; i++) {
+                    ClipData.Item item = clips.getItemAt(i);
+                    if (item != null) uris.add(item.getUri());
+                }
+            } else if (data.getData() != null) {
+                uris.add(data.getData());
+            }
+            boolean safe = !uris.isEmpty() && uris.size() <= MAX_UPLOAD_FILES;
+            for (Uri uri : uris) {
+                if (uri == null || !"content".equals(uri.getScheme()) || uri.getAuthority() == null) {
+                    safe = false;
+                    break;
+                }
+            }
+            if (safe) selected = uris.toArray(new Uri[0]);
+        }
+        completeFileUpload(selected);
+    }
+
+    private void completeFileUpload(Uri[] selected) {
+        ValueCallback<Uri[]> callback = pendingFileUpload;
+        pendingFileUpload = null;
+        if (callback != null) callback.onReceiveValue(selected);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Escape prevention: only the exact document picker may launch outside this app
     // ---------------------------------------------------------------------------------------------
 
     @Override
@@ -591,6 +733,11 @@ public class MainActivity extends Activity implements GuardHost, FileDownloads.L
     @Override
     @SuppressWarnings("deprecation")
     public void startActivityForResult(Intent intent, int requestCode) {
+        if (filePickerLaunchInProgress && requestCode == FILE_PICKER_REQUEST_CODE
+                && isTrustedPickerIntent(intent)) {
+            super.startActivityForResult(intent, requestCode);
+            return;
+        }
         blockExternalIntent(intent);
     }
 
