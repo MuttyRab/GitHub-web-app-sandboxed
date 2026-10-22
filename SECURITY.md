@@ -1,3 +1,27 @@
+## Current Arena integration (proposed branch)
+
+Arena is the default page; the original Arena first-party host list was added to
+the existing GitHub and Google Drive entries. The user-visible WebView and the
+loopback egress guard continue to require an exact approved HTTPS host on port 443.
+The app does **not** grant client-side scripts unrestricted web traffic.
+
+Arena's remote Agent Mode tools are server-side services. The APK's policy neither
+blocks those remote calls nor gives them new abilities; it cannot distinguish the
+agent from a user using client-side fetch traffic. This separation is a trust
+boundary, not a privilege bypass.
+
+One exception to the general refusal of external activities is the user-requested
+Android `ACTION_OPEN_DOCUMENT` picker. Its dispatch is limited to a pending
+WebView upload from an approved product page with an in-flight flag; content URI
+access is scoped to files the user explicitly selects. Do not interpret this as
+permission for camera capture, filesystem browsing or arbitrary intents.
+
+No current CI/device run establishes real Arena sign-in, Drive functionality
+or successful file submission. The prior GitHub-only evidence below predates
+these Arena integration changes.
+
+---
+
 # Security scope — GitHub adaptation
 
 This is the original Arena security architecture with site configuration changes, not a new sandbox.
