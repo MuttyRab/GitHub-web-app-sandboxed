@@ -68,7 +68,7 @@
           "requestFileUpload",
           "isTrustedPickerIntent",
           "addSiteSwitcher",
-          "GitHubAllowlist.DRIVE_URL"
+          "DRIVE_URL"
         ],
         "forbiddenTokens": [
           "\"Downloads are disabled in this app\""
@@ -142,7 +142,7 @@
           "FileUploadHandler",
           "requestFileUpload",
           "onShowFileChooser",
-          "filePathCallback.onReceiveValue(null)"
+          "onReceiveValue"
         ],
         "forbiddenTokens": []
       }
