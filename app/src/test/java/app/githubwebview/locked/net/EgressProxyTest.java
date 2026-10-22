@@ -229,7 +229,7 @@ public class EgressProxyTest {
                 {"127.0.0.1:443", "INVALID_HOST"},
                 {"[::1]:443", "IP_LITERAL_HOST"},
                 {"localhost:443", "INVALID_HOST"},
-                {"www.googleapis.com:443", "HOST_NOT_ALLOWED"},
+                {"oauth2.googleapis.com:443", "HOST_NOT_ALLOWED"},
                 {"mail.google.com:443", "HOST_NOT_ALLOWED"},
                 {"g\u0456thub.com:443", "NON_ASCII_HOST"},
         };
