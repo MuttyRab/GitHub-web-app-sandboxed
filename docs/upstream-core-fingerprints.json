@@ -54,7 +54,7 @@
       "reviewedException": {
         "summary": "Downloads are saved by the app (progress dialog, saved/failed/cancelled/refused reporting), a refused destination is reported as a refusal with its host and reason, and a click that lands on a file-only host offers to save it instead of doing nothing. Additionally, explicit document picker file uploads and a native GitHub/Drive site switcher.",
         "rationale": "Three user reports in one change: Help/Docs links surfaced as 'github.com could not be reached', downloads did nothing, and 'Download raw file' produced no outcome because the file is served inline by an asset host. The refusal wording is now accurate, the activity owns the one FileDownloads instance whose callbacks drive the native surfaces, and an inline file link asks whether to save. No allow-list entry, verdict, permission or loadUrl path changes. Additional explicit user-requested exceptions: a file chooser launches only ACTION_OPEN_DOCUMENT via an exact in-flight intent check and returns user-selected content URIs; Google Drive is one new configured destination via the already verified loading path.",
-        "adaptedCodeSha256": "1877bc3bb7661ab29614bad42b5136d390aa5ff49a62390e3d3494cc13c8a48b",
+        "adaptedCodeSha256": "b6ed6c22af8eabcbb92d2da434c7fafd91ca3dbd92f9030a4a6abecc5da42123",
         "requiredTokens": [
           "verdict",
           "FileDownloads",
