@@ -1,10 +1,30 @@
-# GitHub WebView (Locked)
+# Arena + Approved Sites (Locked)
 
-An **unofficial GitHub adaptation of the existing Arena Android app**, not a new wrapper.
+This build starts on **https://arena.ai/** and allows the main Arena experience (including
+Arena's own Agent Mode UI), previously accessible GitHub pages, Google Drive and the existing
+Google account handoff. All non-approved device-side WebView destinations still fail closed.
+
+**Arena Agent Mode is operated by the Arena service.** Research and website requests executed on
+Arena's own servers do not pass through this APK's local network proxy. The APK cannot force
+Arena's agent to browse sites its service will not browse, and it cannot reliably differentiate
+arbitrary in-page JavaScript fetches from agent-initiated client fetches. There is **no global
+WebView internet exception**. The domain rules intentionally remain enforced for user navigation
+and device-originated resources.
+
+**File uploads:** Arena's existing HTML upload buttons can invoke Android's system
+`ACTION_OPEN_DOCUMENT` picker. Only an explicit request from the main WebView on an approved
+product origin can launch it, with up to 16 chosen documents returned to the page; camera and
+unsolicited intent launches remain denied. Selected files become accessible to the website
+after the user confirms them in the picker. Google Drive is an optional separately approved
+**visible website**, while Google Drive's Android document provider may also appear in the
+system picker. This has not been validated on a physical device.
+
+This fork was an **unofficial GitHub adaptation of the existing Arena Android app** and now
+restores Arena as its home page without removing its GitHub functionality.
 Source baseline: [Arena.ai-apk at 86008ec](https://github.com/markcollege2026-droid/Arena.ai-apk/tree/86008ec377e7dddf94f33c1b36a6eb8395cd867e), Arena 1.2.0.
 The verbatim import is commit `334f840` in this repository. The original repository and both main branches are unchanged.
 
-This session works only on `arena/d30b97e2-github-web-app-sandboxed`.
+The current changes are proposed on `feature/arena-agent-drive-uploads`; `main` is unchanged.
 The install ID is `app.githubwebview.locked` (version 1.0.0 / code 1), separate from
 `app.arenawebview.locked`; the two apps can coexist.
 
